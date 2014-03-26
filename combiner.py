@@ -21,6 +21,7 @@ parser = OptionParser()
 parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
 parser.add_option('--createWorkspace',action="store_true",dest="createWorkspace",default=False,help='do training')
 parser.add_option('--runLimits',action="store_true",dest="runLimits",default=False,help='do training')
+parser.add_option('--getLimits',action="store_true",dest="getLimits",default=False,help='do training')
 
 (options, args) = parser.parse_args()
 
@@ -30,89 +31,103 @@ parser.add_option('--runLimits',action="store_true",dest="runLimits",default=Fal
 
 if __name__ == '__main__':
 
+    ### +++++++++++++++++++++++++++++++++++++++++++++ ###
+    ### ++++++++++++++++++++INPUTS+++++++++++++++++++ ###
+    
     abspath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
-    tmpdir  = "tmp"
-    masses = [600,700,800,900,1000];
-    #masses = [600];    
-    
+    tmpdir  = "/uscms_data/d2/ntran/physics/HighMassHiggs/CMSSW_6_1_1/src/HighMassHiggs/tmp/"
+    eosPath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/test1"
+
+    masses = [200,300,400,500,600,700,800,900,1000];
+    #masses = [400];    
+#    masses = [145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,
+#            165,170,175,180,185,190,195,200,205,210,215,220,225,230,235,240,245,250,
+#            255,260,265,270,275,280,285,290,295,300,
+#            310,320,330,340,350,360,370,380,390,400,420,440,460,480,500,520,540,560,580,
+#            600,700,800,900,1000];
+
     nMasses       = len(masses);
-    masses_array  = array.array('d', [])
-    EL_hzz2l2v_0s = array.array('d', [])
-    EL_hzz2l2t_0s = array.array('d', [])
-    EL_hzz2l2q_0s = array.array('d', [])
-    EL_hwwlvqq_0s = array.array('d', [])
+
+    arrays_masses = []
+    arrays_0sigma = [];
     
+    useBatch = True;
+
+    channels = ["hzz2l2v","hzz2l2t","hzz2l2q","hwwlvqq","hww2l2v"];
+    #channels = ["hzz4l"];
+
+    ### +++++++++++++++++++++++++++++++++++++++++++++ ###
+    ### +++++++++++++++++++++++++++++++++++++++++++++ ###
+    
+    for a in range(len(channels)):
+        arrays_masses.append( array.array('d', []) );
+        arrays_0sigma.append( array.array('d', []) );
+                                                    
     for i in range(len(masses)):
         
-        masses_array.append( masses[i] );
+        # --------------
+        # each channel container
+        chanContainers = [];
+        for a in range(len(channels)):
+            chanContainers.append( chanWP(abspath,channels[a],masses[i],10,00) );
+        # --------------
 
-        cur_hzz2l2v = chanWP(abspath,"hzz2l2v",masses[i],10,00);
-        cur_hzz2l2t = chanWP(abspath,"hzz2l2t",masses[i],10,00);
-        cur_hzz2l2q = chanWP(abspath,"hzz2l2q",masses[i],10,00);
-        cur_hwwlvqq = chanWP(abspath,"hwwlvqq",masses[i],10,00);
-        
+        for a in range(len(chanContainers)):       
+            chanContainers[a].setOPath(tmpdir)
+            chanContainers[a].setEosPath(eosPath)
+                
         if options.createWorkspace:
-            cur_hzz2l2v.createWorkspace();
-            cur_hzz2l2t.createWorkspace();
-            cur_hzz2l2q.createWorkspace();
-            cur_hwwlvqq.createWorkspace();
+            for a in range(len(chanContainers)):       
+                chanContainers[a].createWorkspace();
 
         if options.runLimits:                        
-            cur_hzz2l2v.runAsymLimit();
-            cur_hzz2l2t.runAsymLimit();
-            cur_hzz2l2q.runAsymLimit();
-            cur_hwwlvqq.runAsymLimit();
-                                
-        cur_hzz2l2v.printLimts();
-        cur_hzz2l2t.printLimts();
-        cur_hzz2l2q.printLimts();
-        cur_hwwlvqq.printLimts();
-        
-        EL_hzz2l2v_0s.append(cur_hzz2l2v.lims[3])
-        EL_hzz2l2t_0s.append(cur_hzz2l2t.lims[3])
-        EL_hzz2l2q_0s.append(cur_hzz2l2q.lims[3])
-        EL_hwwlvqq_0s.append(cur_hwwlvqq.lims[3])
-                                                        
-        #print cur_hzz2l2v.lims 
+            for a in range(len(chanContainers)):       
+                chanContainers[a].runAsymLimit(useBatch);
+
+        if options.getLimits:
+            for a in range(len(chanContainers)): 
+                chanContainers[a].getAsymLimits();
+                if chanContainers[a].lims[3] > 0: 
+                    print "mass = ", masses[i], ", and channel = ", channels[a]
+                    arrays_masses[a].append( masses[i] );
+                    arrays_0sigma[a].append( chanContainers[a].lims[3] );
         
     ## ---------------------------------------------------------        
-    # make graphs
-    gr_hzz2l2v = ROOT.TGraph(nMasses,masses_array,EL_hzz2l2v_0s);
-    gr_hzz2l2t = ROOT.TGraph(nMasses,masses_array,EL_hzz2l2t_0s);
-    gr_hzz2l2q = ROOT.TGraph(nMasses,masses_array,EL_hzz2l2q_0s);
-    gr_hwwlvqq = ROOT.TGraph(nMasses,masses_array,EL_hwwlvqq_0s);            
-    gr_hzz2l2v.SetLineColor(3);
-    gr_hzz2l2t.SetLineColor(7);
-    gr_hzz2l2q.SetLineColor(4);
-    gr_hwwlvqq.SetLineColor(6); 
-        
-    # draw limits!
-    leg = ROOT.TLegend(0.15,0.6,0.4,0.85);
-    leg.SetFillStyle(1001);
-    leg.SetFillColor(0);    
-    leg.SetBorderSize(1);    
-    leg.AddEntry(gr_hzz2l2v,"hzz2l2v","l");
-    leg.AddEntry(gr_hzz2l2t,"hzz2l2t","l");
-    leg.AddEntry(gr_hzz2l2q,"hzz2l2q","l");
-    leg.AddEntry(gr_hwwlvqq,"hwwlvqq","l");
     
-    oneLine = ROOT.TF1("oneLine","1",599,1001);
-    oneLine.SetLineColor(ROOT.kRed);
-    oneLine.SetLineWidth(1);
+    if options.getLimits:
 
-    can = ROOT.TCanvas("can","can",1200,800);
-    hrl = can.DrawFrame(599,0.1,1001,100.);
-    hrl.GetYaxis().SetTitle("#mu' = C' #times #mu");
-    hrl.GetXaxis().SetTitle("mass (GeV)");
-    can.SetGrid(); 
-    gr_hzz2l2v.Draw();
-    gr_hzz2l2t.Draw();
-    gr_hzz2l2q.Draw();
-    gr_hwwlvqq.Draw();
-    oneLine.Draw("LSAMES");
-    leg.Draw()
-    ROOT.gPad.SetLogy();
-    can.SaveAs("test.eps");
-                   
+        # make graphs
+        graphs = [];
+        for a in range(len(channels)):
+            print "len(arrays_masses[a]) = ", len(arrays_masses[a])
+            graphs.append( ROOT.TGraph( len(arrays_masses[a]), arrays_masses[a], arrays_0sigma[a] ) );
+
+        # draw limits!
+        colors = [2,4,6,7,3,8];
+        leg = ROOT.TLegend(0.15,0.6,0.4,0.85);
+        leg.SetFillStyle(1001);
+        leg.SetFillColor(0);    
+        leg.SetBorderSize(1);  
+        for a in range(len(channels)):
+            graphs[a].SetLineColor( colors[a] );        
+            leg.AddEntry(graphs[a],channels[a],"l");
+            
+        oneLine = ROOT.TF1("oneLine","1",199,1001);
+        oneLine.SetLineColor(ROOT.kGreen+2);
+        oneLine.SetLineWidth(2);
+         
+        can = ROOT.TCanvas("can","can",1200,800);
+        hrl = can.DrawFrame(199,0.1,1001,100.);
+        hrl.GetYaxis().SetTitle("#sigma_{95CL}/#sigma_{SM}");
+        hrl.GetXaxis().SetTitle("mass (GeV)");
+        can.SetGrid(); 
+
+        for a in range(len(channels)): graphs[a].Draw();
+
+        oneLine.Draw("LSAMES");
+        leg.Draw()
+        ROOT.gPad.SetLogy();
+        can.SaveAs("test.eps");        
+                                 
                    
                    
