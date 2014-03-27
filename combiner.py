@@ -35,8 +35,11 @@ if __name__ == '__main__':
     ### ++++++++++++++++++++INPUTS+++++++++++++++++++ ###
     
     abspath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
-    tmpdir  = "/uscms_data/d2/ntran/physics/HighMassHiggs/CMSSW_6_1_1/src/HighMassHiggs/tmp/"
-    eosPath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/test1"
+    tmpdir  = "/uscms_data/d2/ntran/physics/HighMassHiggs/CMSSW_6_1_1/src/HighMassHiggs/tmp3"
+    eosPath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/test3"
+
+    # for some reason XXX is causing the full combination to break...
+    # submitted hzz4l to it's own dir
 
     masses = [200,300,400,500,600,700,800,900,1000];
     #masses = [400];    
@@ -53,15 +56,20 @@ if __name__ == '__main__':
     
     useBatch = True;
 
-    channels = ["hzz2l2v","hzz2l2t","hzz2l2q","hwwlvqq","hww2l2v"];
+    #channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v"];
+    #channels = ["hzz2l2t"];
+    channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v","hzz2l2t"]
     #channels = ["hzz4l"];
-
+    
     ### +++++++++++++++++++++++++++++++++++++++++++++ ###
     ### +++++++++++++++++++++++++++++++++++++++++++++ ###
     
     for a in range(len(channels)):
         arrays_masses.append( array.array('d', []) );
         arrays_0sigma.append( array.array('d', []) );
+    # for combination
+    arrays_masses.append( array.array('d', []) );
+    arrays_0sigma.append( array.array('d', []) );
                                                     
     for i in range(len(masses)):
         
@@ -76,13 +84,13 @@ if __name__ == '__main__':
             chanContainers[a].setOPath(tmpdir)
             chanContainers[a].setEosPath(eosPath)
                 
-        if options.createWorkspace:
-            for a in range(len(chanContainers)):       
-                chanContainers[a].createWorkspace();
-
-        if options.runLimits:                        
-            for a in range(len(chanContainers)):       
-                chanContainers[a].runAsymLimit(useBatch);
+#        if options.createWorkspace:
+#            for a in range(len(chanContainers)):       
+#                chanContainers[a].createWorkspace();
+#        
+#        if options.runLimits:                        
+#            for a in range(len(chanContainers)):       
+#                chanContainers[a].runAsymLimit(useBatch);
 
         if options.getLimits:
             for a in range(len(chanContainers)): 
@@ -91,10 +99,26 @@ if __name__ == '__main__':
                     print "mass = ", masses[i], ", and channel = ", channels[a]
                     arrays_masses[a].append( masses[i] );
                     arrays_0sigma[a].append( chanContainers[a].lims[3] );
-        
+                    
+        combiner = combinedClass( chanContainers );
+        combiner.setOPath(tmpdir)
+        combiner.setEosPath(eosPath)
+        if options.createWorkspace:
+            combiner.createCombinedWorkspace();
+        if options.runLimits:                                
+            combiner.runAsymLimit(useBatch);
+        if options.getLimits:
+            combiner.getAsymLimits();  
+            if combiner.lims[3] > 0: 
+                arrays_masses[len(channels)].append( masses[i] );
+                arrays_0sigma[len(channels)].append( combiner.lims[3] );
+
+  
     ## ---------------------------------------------------------        
     
     if options.getLimits:
+
+        channels.append("ALL");
 
         # make graphs
         graphs = [];
@@ -103,19 +127,22 @@ if __name__ == '__main__':
             graphs.append( ROOT.TGraph( len(arrays_masses[a]), arrays_masses[a], arrays_0sigma[a] ) );
 
         # draw limits!
-        colors = [2,4,6,7,3,8];
+        colors = [2,4,6,7,3,1];
+        widths = [2,2,2,2,2,3];        
         leg = ROOT.TLegend(0.15,0.6,0.4,0.85);
         leg.SetFillStyle(1001);
         leg.SetFillColor(0);    
         leg.SetBorderSize(1);  
         for a in range(len(channels)):
             graphs[a].SetLineColor( colors[a] );        
+            graphs[a].SetLineWidth( widths[a] );                    
             leg.AddEntry(graphs[a],channels[a],"l");
             
         oneLine = ROOT.TF1("oneLine","1",199,1001);
-        oneLine.SetLineColor(ROOT.kGreen+2);
-        oneLine.SetLineWidth(2);
-         
+        oneLine.SetLineColor(ROOT.kRed+2);
+        oneLine.SetLineWidth(1);
+        oneLine.SetLineStyle(2);
+                 
         can = ROOT.TCanvas("can","can",1200,800);
         hrl = can.DrawFrame(199,0.1,1001,100.);
         hrl.GetYaxis().SetTitle("#sigma_{95CL}/#sigma_{SM}");
