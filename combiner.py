@@ -19,9 +19,10 @@ from optparse import OptionParser
 parser = OptionParser()
 
 parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
-parser.add_option('--createWorkspace',action="store_true",dest="createWorkspace",default=False,help='do training')
+parser.add_option('--createWorkspaces',action="store_true",dest="createWorkspace",default=False,help='do training')
 parser.add_option('--runLimits',action="store_true",dest="runLimits",default=False,help='do training')
 parser.add_option('--getLimits',action="store_true",dest="getLimits",default=False,help='do training')
+parser.add_option('--doCombos',action="store_true",dest="doCombos",default=False,help='do training')
 
 (options, args) = parser.parse_args()
 
@@ -35,14 +36,14 @@ if __name__ == '__main__':
     ### ++++++++++++++++++++INPUTS+++++++++++++++++++ ###
     
     abspath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
-    tmpdir  = "/uscms_data/d2/ntran/physics/HighMassHiggs/CMSSW_6_1_1/src/HighMassHiggs/tmp3"
-    eosPath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/test3"
+    tmpdir  = "/uscms_data/d2/ntran/physics/HighMassHiggs/combineHEAD/CMSSW_6_1_1/src/HighMassHiggs/tmphead1"
+    eosPath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/testhead1"
 
     # for some reason XXX is causing the full combination to break...
     # submitted hzz4l to it's own dir
 
-    masses = [200,300,400,500,600,700,800,900,1000];
-    #masses = [400];    
+    #masses = [200,300,400,500,600,700,800,900,1000];
+    masses = [400];    
 #    masses = [145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,
 #            165,170,175,180,185,190,195,200,205,210,215,220,225,230,235,240,245,250,
 #            255,260,265,270,275,280,285,290,295,300,
@@ -56,9 +57,9 @@ if __name__ == '__main__':
     
     useBatch = True;
 
-    #channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v"];
+    channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v"];
     #channels = ["hzz2l2t"];
-    channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v","hzz2l2t"]
+    #channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v","hzz2l2t"]
     #channels = ["hzz4l"];
     
     ### +++++++++++++++++++++++++++++++++++++++++++++ ###
@@ -67,9 +68,11 @@ if __name__ == '__main__':
     for a in range(len(channels)):
         arrays_masses.append( array.array('d', []) );
         arrays_0sigma.append( array.array('d', []) );
+
     # for combination
-    arrays_masses.append( array.array('d', []) );
-    arrays_0sigma.append( array.array('d', []) );
+    if options.doCombos:
+        arrays_masses.append( array.array('d', []) );
+        arrays_0sigma.append( array.array('d', []) );
                                                     
     for i in range(len(masses)):
         
@@ -77,20 +80,16 @@ if __name__ == '__main__':
         # each channel container
         chanContainers = [];
         for a in range(len(channels)):
-            chanContainers.append( chanWP(abspath,channels[a],masses[i],10,00) );
+            chanContainers.append( chanWP(abspath,channels[a],masses[i],10,00,tmpdir,eosPath) );
         # --------------
-
-        for a in range(len(chanContainers)):       
-            chanContainers[a].setOPath(tmpdir)
-            chanContainers[a].setEosPath(eosPath)
                 
-#        if options.createWorkspace:
-#            for a in range(len(chanContainers)):       
-#                chanContainers[a].createWorkspace();
-#        
-#        if options.runLimits:                        
-#            for a in range(len(chanContainers)):       
-#                chanContainers[a].runAsymLimit(useBatch);
+        if options.createWorkspace:
+            for a in range(len(chanContainers)):       
+                chanContainers[a].createWorkspace();
+        
+        if options.runLimits:                        
+            for a in range(len(chanContainers)):       
+                chanContainers[a].runAsymLimit(useBatch);
 
         if options.getLimits:
             for a in range(len(chanContainers)): 
@@ -99,26 +98,26 @@ if __name__ == '__main__':
                     print "mass = ", masses[i], ", and channel = ", channels[a]
                     arrays_masses[a].append( masses[i] );
                     arrays_0sigma[a].append( chanContainers[a].lims[3] );
-                    
-        combiner = combinedClass( chanContainers );
-        combiner.setOPath(tmpdir)
-        combiner.setEosPath(eosPath)
-        if options.createWorkspace:
-            combiner.createCombinedWorkspace();
-        if options.runLimits:                                
-            combiner.runAsymLimit(useBatch);
-        if options.getLimits:
-            combiner.getAsymLimits();  
-            if combiner.lims[3] > 0: 
-                arrays_masses[len(channels)].append( masses[i] );
-                arrays_0sigma[len(channels)].append( combiner.lims[3] );
+
+        # combinations
+        if options.doCombos:
+            combiner = combinedClass( chanContainers );
+            if options.createWorkspace:
+                combiner.createCombinedWorkspace();
+            if options.runLimits:                                
+                combiner.runAsymLimit(useBatch);
+            if options.getLimits:
+                combiner.getAsymLimits();  
+                if combiner.lims[3] > 0: 
+                    arrays_masses[len(channels)].append( masses[i] );
+                    arrays_0sigma[len(channels)].append( combiner.lims[3] );
 
   
     ## ---------------------------------------------------------        
     
     if options.getLimits:
 
-        channels.append("ALL");
+        if options.doCombos: channels.append("ALL");
 
         # make graphs
         graphs = [];

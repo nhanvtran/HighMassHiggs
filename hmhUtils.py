@@ -5,6 +5,128 @@ import array
 import sys
 import time
 import ROOT
+
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##### inherited class for holding the ws information
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+
+class workspaceContainer:
+
+    def __init__(self,wsName,eosLocation,olabel):
+
+        self.cwd         = os.getcwd();
+        self.wsName      = wsName;
+        self.wsDir       = os.path.dirname(wsName);
+        self.wsFN        = os.path.basename(wsName);       
+        self.eosLocation = eosLocation;
+        self.olabel      = olabel;
+        self.lims        = [-1,-1,-1,-1,-1,-1];        
+
+    def runAsymLimit(self, isBatch, mass, channel = "ALL"):
+                
+        os.chdir( self.wsDir );
+        
+        # combine options
+        meth = "-M Asymptotic"        
+        combineOptions = "--run expected";
+        #if channel == "ALL": continue; 
+        if channel == "hzz4l": 
+            combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
+        #else: continue;
+        
+        cmmd = "combine %s %s -n %s -m %03i %s" % (self.wsFN,meth,self.olabel,mass,combineOptions);
+
+        if isBatch: 
+            self.submitBatchJobCombine(cmmd);
+        else: 
+            os.system(cmmd);
+
+        os.chdir(self.cwd); 
+
+    def submitBatchJobCombine(self, command):
+            
+        currentDir = os.getcwd();
+        print "Submitting batch job from: ", currentDir
+
+        fnCore = os.path.splitext(self.wsFN)[0];
+        fn = "condorScript_%s" % (fnCore);
+        
+        # create a dummy bash/csh
+        outScript=open(fn+".sh","w");
+        
+        outScript.write('#!/bin/bash');
+        outScript.write("\n"+'date');
+        outScript.write("\n"+'source /uscmst1/prod/sw/cms/bashrc prod');
+        outScript.write("\n"+'cd '+self.wsDir);
+        outScript.write("\n"+'eval `scram runtime -sh`');
+        outScript.write("\n"+'cd -');
+        outScript.write("\n"+'ls');    
+        outScript.write("\n"+command);
+        outScript.write("\n"+'cp higgsCombine*'+self.olabel+'*.root '+self.eosLocation);
+        outScript.close();
+        
+        # link a condor script to your shell script
+        condorScript=open("subCondor_"+fn,"w");
+        condorScript.write('universe = vanilla')
+        condorScript.write("\n"+"Executable = "+fn+".sh")
+        condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
+        condorScript.write("\n"+'Should_Transfer_Files = YES')
+        condorScript.write("\n"+'Transfer_Input_Files = '+self.wsName)    
+        condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
+        condorScript.write("\n"+'Output = out_$(Cluster).stdout')
+        condorScript.write("\n"+'Error  = out_$(Cluster).stderr')
+        condorScript.write("\n"+'Error  = out_$(Cluster).stderr')
+        condorScript.write("\n"+'Log    = out_$(Cluster).log')
+        condorScript.write("\n"+'Notification    = Error')
+        condorScript.write("\n"+'Queue 1')
+        condorScript.close();
+        
+        # submit the condor job 
+        
+        os.system("condor_submit "+"subCondor_"+fn)
+
+    def getAsymLimits(self):
+                
+        file = "%s/%s" % (self.eospath,self.outputName);
+        
+        if not os.path.isfile(file): 
+            print "Warning (GetAsymLimits): "+file+" does not exist"
+            return;
+        
+        f = ROOT.TFile(file);
+        t = f.Get("limit");
+        entries = t.GetEntries();
+        
+        for i in range(entries):
+            
+            t.GetEntry(i);
+            t_quantileExpected = t.quantileExpected;
+            t_limit = t.limit;
+            
+            #print "limit: ", t_limit, ", quantileExpected: ",t_quantileExpected;
+            
+            if t_quantileExpected == -1.: self.lims[0] = t_limit;
+            elif t_quantileExpected >= 0.024 and t_quantileExpected <= 0.026: self.lims[1] = t_limit;
+            elif t_quantileExpected >= 0.15 and t_quantileExpected <= 0.17: self.lims[2] = t_limit;            
+            elif t_quantileExpected == 0.5: self.lims[3] = t_limit;            
+            elif t_quantileExpected >= 0.83 and t_quantileExpected <= 0.85: self.lims[4] = t_limit;
+            elif t_quantileExpected >= 0.974 and t_quantileExpected <= 0.976: self.lims[5] = t_limit;
+            else: print "Unknown quantile!"
+
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
         
 ##########################################################################################################
 # class for combining all the channels
@@ -12,21 +134,20 @@ import ROOT
 
 class combinedClass:
     
-    def __init__(self,channelContainers):    
+    def __init__(self,channelContainers,channel="ALL"):    
         
-        self.cwd = os.getcwd();
-        self.channel = "ALL";
-        self.chanWPs = channelContainers;
-        
+        self.chanWPs = channelContainers;        
         allChannels = [ self.chanWPs[i].channel for i in range(len(self.chanWPs)) ]
         print "Combining these channels: ", allChannels
-        
-        self.mass  = self.chanWPs[0].mass;
-        self.cpsq  = self.chanWPs[0].cpsq;
-        self.brnew = self.chanWPs[0].brnew;
-        self.opath   = "tmp";
-        self.eospath = "/eos/uscms/store/user/ntran/"
+
+        self.channel = channel;        
+        self.mass    = self.chanWPs[0].mass;
+        self.cpsq    = self.chanWPs[0].cpsq;
+        self.brnew   = self.chanWPs[0].brnew;
+        self.opath   = self.chanWPs[0].opath;
+        self.eospath = self.chanWPs[0].eospath
         self.lims    = [-1,-1,-1,-1,-1,-1];
+        self.cwd = os.getcwd();
                 
         tmpdirname = "tmptmp_%03i_%02i_%02i" % (self.mass,self.cpsq,self.brnew);
         self.tmpdir = tmpdirname;
@@ -38,11 +159,13 @@ class combinedClass:
             cpCmmd = "cp %s/*.* %s/." % (self.chanWPs[i].svnDir,self.tmpdir);
             os.system(cpCmmd);
             
-    def setOPath(self,path):
-        self.opath = path;
-
-    def setEosPath(self,path):
-        self.eospath = path;            
+        # the name of the workspace
+        wsName = "%s/ws_%s_%03i_%02i_%02i.root" % (self.opath,self.channel,self.mass,self.cpsq,self.brnew);
+        self.wsname = wsName;
+            
+        # the name of the output from combine
+        olabel = "_%s_%03i_%02i_%02i" % (self.channel,self.mass,self.cpsq,self.brnew);
+        self.wsContainer = workspaceContainer( self.wsname, self.eospath, olabel );
             
     def createCombinedWorkspace(self):
             
@@ -65,99 +188,22 @@ class combinedClass:
         os.system(cmmd);
         
         os.chdir(curdir);
-        
+
+    ##########################################################################################################
+
     def runAsymLimit(self, isBatch):
 
-        self.opath   = self.chanWPs[0].opath;
-                
-        os.chdir(self.opath);
-        
-        #combine ws_hzz2l2q_600_10_00.root -M Asymptotic -n "_nhantest" -m 600 -t -1
-        ws = "ws_%s_%03i_%02i_%02i.root" % (self.channel,self.mass,self.cpsq,self.brnew);
-        meth = "-M Asymptotic"
-        oname = "_%s_%03i_%02i_%02i" % (self.channel,self.mass,self.cpsq,self.brnew);
-        
-        combineOptions = "--run expected";
-        if self.channel == "hzz4l": combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
-        
-        cmmd = "combine %s %s -n %s -m %03i %s" % (ws,meth,oname,self.mass, combineOptions);
+        self.wsContainer.runAsymLimit(isBatch,self.mass,self.channel);
 
-        if isBatch: 
-            self.submitBatchJobCombine(cmmd, ws, oname);
-        else: 
-            os.system(cmmd);
-
-        os.chdir(self.cwd);        
-
+    ##########################################################################################################
+    
     def getAsymLimits(self):
         
-        file = "%s/higgsCombine_%s_%03i_%02i_%02i.Asymptotic.mH%03i.root" % (self.eospath,self.channel,self.mass,self.cpsq,self.brnew,self.mass);
+        self.wsContainer.getAsymLimits();
+        self.lims = workspaceContainer.lims;
+        return self.lims
         
-        if not os.path.isfile(file): return;
-        
-        f = ROOT.TFile(file);
-        t = f.Get("limit");
-        entries = t.GetEntries();
-        
-        for i in range(entries):
-            
-            t.GetEntry(i);
-            t_quantileExpected = t.quantileExpected;
-            t_limit = t.limit;
-            
-            #print "limit: ", t_limit, ", quantileExpected: ",t_quantileExpected;
-            
-            if t_quantileExpected == -1.: self.lims[0] = t_limit;
-            elif t_quantileExpected >= 0.024 and t_quantileExpected <= 0.026: self.lims[1] = t_limit;
-            elif t_quantileExpected >= 0.15 and t_quantileExpected <= 0.17: self.lims[2] = t_limit;            
-            elif t_quantileExpected == 0.5: self.lims[3] = t_limit;            
-            elif t_quantileExpected >= 0.83 and t_quantileExpected <= 0.85: self.lims[4] = t_limit;
-            elif t_quantileExpected >= 0.974 and t_quantileExpected <= 0.976: self.lims[5] = t_limit;
-            else: print "Unknown quantile!"
-
-
-    # ----------------------------------------
-    def submitBatchJobCombine(self, command, ws, oname):
-            
-        currentDir = os.getcwd();
-        print "Submitting batch job from: ", currentDir
-
-        fnCore = os.path.splitext(ws)[0];
-        fn = "condorScript_%s" % (fnCore);
-        
-        # create a dummy bash/csh
-        outScript=open(fn+".sh","w");
-        
-        outScript.write('#!/bin/bash');
-        outScript.write("\n"+'date');
-        outScript.write("\n"+'source /uscmst1/prod/sw/cms/bashrc prod');
-        outScript.write("\n"+'cd '+self.cwd);
-        outScript.write("\n"+'eval `scram runtime -sh`');
-        outScript.write("\n"+'cd -');
-        outScript.write("\n"+'ls');    
-        outScript.write("\n"+command);
-        outScript.write("\n"+'cp higgsCombine*'+oname+'*.root '+self.eospath);
-        outScript.close();
-        
-        # link a condor script to your shell script
-        condorScript=open("subCondor_"+fn,"w");
-        condorScript.write('universe = vanilla')
-        condorScript.write("\n"+"Executable = "+fn+".sh")
-        condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
-        condorScript.write("\n"+'Should_Transfer_Files = YES')
-        condorScript.write("\n"+'Transfer_Input_Files = '+ws)    
-        condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
-        condorScript.write("\n"+'Output = out_$(Cluster).stdout')
-        condorScript.write("\n"+'Error  = out_$(Cluster).stderr')
-        condorScript.write("\n"+'Error  = out_$(Cluster).stderr')
-        condorScript.write("\n"+'Log    = out_$(Cluster).log')
-        condorScript.write("\n"+'Notification    = Error')
-        condorScript.write("\n"+'Queue 1')
-        condorScript.close();
-        
-        # submit the condor job 
-        
-        os.system("condor_submit "+"subCondor_"+fn)
+    ##########################################################################################################
 
                     
 ##########################################################################################################
@@ -166,7 +212,7 @@ class combinedClass:
 
 class chanWP:
 
-    def __init__(self,abspath,channel,mass,cpsq,brnew):
+    def __init__(self,abspath,channel,mass,cpsq,brnew,opath,eospath):
 
         self.abspath = abspath;
 
@@ -175,41 +221,36 @@ class chanWP:
         self.cpsq    = cpsq;
         self.brnew   = brnew;
         
-        self.opath   = "tmp/";
-        self.eospath = "/eos/uscms/store/user/ntran/"
+        self.opath   = opath;
+        self.eospath = eospath;
         self.lims    = [-1,-1,-1,-1,-1,-1];
         self.cwd = os.getcwd();
         self.dcnames = [];   
         
-        massdir = "%03i" % self.mass;
-        bsmdir  = "cpsq%02i_brnew%02i" % (self.cpsq,self.brnew);
-        localpath = self.channel + "/" + massdir + "/" + bsmdir + "/";
-        self.svnDir = self.abspath + "/" + localpath;
+        self.massdir = "%03i" % self.mass;
+        self.bsmdir  = "cpsq%02i_brnew%02i" % (self.cpsq,self.brnew);
+        self.localpath = self.channel + "/" + self.massdir + "/" + self.bsmdir + "/";
+        self.svnDir = self.abspath + "/" + self.localpath;
         
         # get the datacard names
-        self.getDCNames();                  
-
-    ##########################################################################################################        
+        self.getDCNames();         
         
-    def setOPath(self,path):
-        self.opath = path;
-
-    def setEosPath(self,path):
-        self.eospath = path;
+        # the name of the workspace
+        wsName = "%s/ws_%s_%03i_%02i_%02i.root" % (self.opath,self.channel,self.mass,self.cpsq,self.brnew);
+        self.wsname = wsName;
+        
+        # the name of the output from combine
+        olabel = "_%s_%03i_%02i_%02i" % (self.channel,self.mass,self.cpsq,self.brnew);
+        self.wsContainer = workspaceContainer( self.wsname, self.eospath, olabel );
     
     ##########################################################################################################
     
     def createWorkspace(self):
            
         if len(self.dcnames) == 0: return;
-                             
-        # setup the path
-        massdir = "%03i" % self.mass;
-        bsmdir  = "cpsq%02i_brnew%02i" % (self.cpsq,self.brnew);
-        localpath = self.channel + "/" + massdir + "/" + bsmdir + "/";
         
         # go to that dir
-        os.chdir(self.abspath + "/" + localpath);
+        os.chdir(self.svnDir);
 
         # combine cards for a given channel
         ccName = "combine_%s_%03i_%02i_%02i.txt" % (self.channel,self.mass,self.cpsq,self.brnew);
@@ -220,8 +261,7 @@ class chanWP:
         os.system(combineCmmd);
         
         # turn into a workspace
-        wsName = "%s/ws_%s_%03i_%02i_%02i.root" % (self.opath,self.channel,self.mass,self.cpsq,self.brnew);
-        cmmd = "text2workspace.py %s -o %s" % (ccName,wsName);
+        cmmd = "text2workspace.py %s -o %s" % (ccName,self.wsname);
         print cmmd
         os.system(cmmd);
         
@@ -235,58 +275,16 @@ class chanWP:
 
     def runAsymLimit(self, isBatch):
 
-        if len(self.dcnames) == 0: return;
-                
-        os.chdir(self.opath);
-        
-        #combine ws_hzz2l2q_600_10_00.root -M Asymptotic -n "_nhantest" -m 600 -t -1
-        ws = "ws_%s_%03i_%02i_%02i.root" % (self.channel,self.mass,self.cpsq,self.brnew);
-        meth = "-M Asymptotic"
-        oname = "_%s_%03i_%02i_%02i" % (self.channel,self.mass,self.cpsq,self.brnew);
-        
-        combineOptions = "--run expected";
-        if self.channel == "hzz4l": combineOptions = "--minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
-        
-        
-        cmmd = "combine %s %s -n %s -m %03i %s" % (ws,meth,oname,self.mass, combineOptions);
-
-        if isBatch: 
-            self.submitBatchJobCombine(cmmd, ws, oname);
-        else: 
-            os.system(cmmd);
-
-        os.chdir(self.cwd);
+        self.wsContainer.runAsymLimit(isBatch,self.mass,self.channel);
 
     ##########################################################################################################
     
     def getAsymLimits(self):
         
-        if len(self.dcnames) == 0: return;
+        self.wsContainer.getAsymLimits();
+        self.lims = workspaceContainer.lims;
+        return self.lims
         
-        file = "%s/higgsCombine_%s_%03i_%02i_%02i.Asymptotic.mH%03i.root" % (self.eospath,self.channel,self.mass,self.cpsq,self.brnew,self.mass);
-        
-        if not os.path.isfile(file): return;
-        
-        f = ROOT.TFile(file);
-        t = f.Get("limit");
-        entries = t.GetEntries();
-        
-        for i in range(entries):
-            
-            t.GetEntry(i);
-            t_quantileExpected = t.quantileExpected;
-            t_limit = t.limit;
-            
-            #print "limit: ", t_limit, ", quantileExpected: ",t_quantileExpected;
-            
-            if t_quantileExpected == -1.: self.lims[0] = t_limit;
-            elif t_quantileExpected >= 0.024 and t_quantileExpected <= 0.026: self.lims[1] = t_limit;
-            elif t_quantileExpected >= 0.15 and t_quantileExpected <= 0.17: self.lims[2] = t_limit;            
-            elif t_quantileExpected == 0.5: self.lims[3] = t_limit;            
-            elif t_quantileExpected >= 0.83 and t_quantileExpected <= 0.85: self.lims[4] = t_limit;
-            elif t_quantileExpected >= 0.974 and t_quantileExpected <= 0.976: self.lims[5] = t_limit;
-            else: print "Unknown quantile!"
-
     ##########################################################################################################
 
     # will be different for a specific channel
@@ -345,68 +343,9 @@ class chanWP:
             self.dcnames.append("hwwsf_2j_cut_8TeV_SM.txt");                                                                 
         
         # check that the cards exist!!
-        massdir   = "%03i" % self.mass;
-        bsmdir    = "cpsq%02i_brnew%02i" % (self.cpsq,self.brnew);
-        localpath = self.channel + "/" + massdir + "/" + bsmdir + "/";
-        fullpath  = self.abspath + "/" + localpath;
-                
         for i in range(len(self.dcnames)):
-            if not os.path.isfile(fullpath+"/"+self.dcnames[i]): 
-                print "warning, Missing DC at "+fullpath+"/"+self.dcnames[i]
+            if not os.path.isfile(self.svnDir+"/"+self.dcnames[i]): 
+                print "warning, Missing DC at "+self.svnDir+"/"+self.dcnames[i]
                 #raise Warning( "Missing DC at "+fullpath+"/"+self.dcnames[i] )
         
-    ##########################################################################################################
-    
-    def printLimts(self,blind=True):
-        
-        self.getAsymLimits();
-    
-        init = 0;
-        if blind: init = 1;
-        print "channel: ",self.channel,", mass: ", self.mass, ", cpsq: ", self.cpsq, ", brnew: ", self.brnew
-        for i in range(init,len(self.lims)):  
-            print "lim ",i,":",round(self.lims[i],3);
-    
-    # ----------------------------------------
-    def submitBatchJobCombine(self, command, ws, oname):
-            
-        currentDir = os.getcwd();
-        print "Submitting batch job from: ", currentDir
-
-        fnCore = os.path.splitext(ws)[0];
-        fn = "condorScript_%s" % (fnCore);
-        
-        # create a dummy bash/csh
-        outScript=open(fn+".sh","w");
-        
-        outScript.write('#!/bin/bash');
-        outScript.write("\n"+'date');
-        outScript.write("\n"+'source /uscmst1/prod/sw/cms/bashrc prod');
-        outScript.write("\n"+'cd '+self.cwd);
-        outScript.write("\n"+'eval `scram runtime -sh`');
-        outScript.write("\n"+'cd -');
-        outScript.write("\n"+'ls');    
-        outScript.write("\n"+command);
-        outScript.write("\n"+'cp higgsCombine*'+oname+'*.root '+self.eospath);
-        outScript.close();
-        
-        # link a condor script to your shell script
-        condorScript=open("subCondor_"+fn,"w");
-        condorScript.write('universe = vanilla')
-        condorScript.write("\n"+"Executable = "+fn+".sh")
-        condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
-        condorScript.write("\n"+'Should_Transfer_Files = YES')
-        condorScript.write("\n"+'Transfer_Input_Files = '+ws)    
-        condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
-        condorScript.write("\n"+'Output = out_$(Cluster).stdout')
-        condorScript.write("\n"+'Error  = out_$(Cluster).stderr')
-        condorScript.write("\n"+'Error  = out_$(Cluster).stderr')
-        condorScript.write("\n"+'Log    = out_$(Cluster).log')
-        condorScript.write("\n"+'Notification    = Error')
-        condorScript.write("\n"+'Queue 1')
-        condorScript.close();
-        
-        # submit the condor job 
-        
-        os.system("condor_submit "+"subCondor_"+fn)
     
