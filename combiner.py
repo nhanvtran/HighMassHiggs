@@ -36,14 +36,14 @@ if __name__ == '__main__':
     ### ++++++++++++++++++++INPUTS+++++++++++++++++++ ###
     
     abspath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
-    tmpdir  = "/uscms_data/d2/ntran/physics/HighMassHiggs/combineHEAD/CMSSW_6_1_1/src/HighMassHiggs/tmphead1"
-    eosPath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/testhead1"
+    tmpdir  = "/uscms_data/d2/ntran/physics/HighMassHiggs/combineHEAD/CMSSW_6_1_1/src/HighMassHiggs/tmphead3"
+    eosPath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/testhead2"
 
     # for some reason XXX is causing the full combination to break...
     # submitted hzz4l to it's own dir
 
     #masses = [200,300,400,500,600,700,800,900,1000];
-    masses = [400];    
+    masses = [600,700,800,900,1000];    
 #    masses = [145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,
 #            165,170,175,180,185,190,195,200,205,210,215,220,225,230,235,240,245,250,
 #            255,260,265,270,275,280,285,290,295,300,
@@ -53,26 +53,36 @@ if __name__ == '__main__':
     nMasses       = len(masses);
 
     arrays_masses = []
+    arrays_masses_env = []    
     arrays_0sigma = [];
+    arrays_1sigma = [];    
+    arrays_2sigma = [];    
     
     useBatch = True;
 
-    channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v"];
+    #channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v"];
     #channels = ["hzz2l2t"];
-    #channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v","hzz2l2t"]
-    #channels = ["hzz4l"];
-    
+    #channels = ["hzz2l2q","hwwlvqq","hww2l2v","hzz2l2v","hzz2l2t","hzz4l"]
+    channels = ["hwwlvqq","hwwlvqq_01je","hwwlvqq_01jm","hwwlvqq_2j"];
+
+    channelNames = ["Combined, HWWlvJ","0+1 jet bin, el","0+1 jet bin, mu","2 jet bin, el+mu"];    
     ### +++++++++++++++++++++++++++++++++++++++++++++ ###
     ### +++++++++++++++++++++++++++++++++++++++++++++ ###
     
     for a in range(len(channels)):
         arrays_masses.append( array.array('d', []) );
+        arrays_masses_env.append( array.array('d', []) );        
         arrays_0sigma.append( array.array('d', []) );
-
+        arrays_1sigma.append( array.array('d', []) );
+        arrays_2sigma.append( array.array('d', []) );
+                
     # for combination
     if options.doCombos:
         arrays_masses.append( array.array('d', []) );
+        arrays_masses_env.append( array.array('d', []) );        
         arrays_0sigma.append( array.array('d', []) );
+        arrays_1sigma.append( array.array('d', []) );
+        arrays_2sigma.append( array.array('d', []) );
                                                     
     for i in range(len(masses)):
         
@@ -83,11 +93,11 @@ if __name__ == '__main__':
             chanContainers.append( chanWP(abspath,channels[a],masses[i],10,00,tmpdir,eosPath) );
         # --------------
                 
-        if options.createWorkspace:
+        if options.createWorkspace and not options.doCombos:
             for a in range(len(chanContainers)):       
                 chanContainers[a].createWorkspace();
         
-        if options.runLimits:                        
+        if options.runLimits and not options.doCombos:                        
             for a in range(len(chanContainers)):       
                 chanContainers[a].runAsymLimit(useBatch);
 
@@ -97,11 +107,14 @@ if __name__ == '__main__':
                 if chanContainers[a].lims[3] > 0: 
                     print "mass = ", masses[i], ", and channel = ", channels[a]
                     arrays_masses[a].append( masses[i] );
+                    arrays_masses_env[a].append( masses[i] );                    
                     arrays_0sigma[a].append( chanContainers[a].lims[3] );
-
+                    arrays_1sigma[a].append( chanContainers[a].lims[2] );
+                    arrays_2sigma[a].append( chanContainers[a].lims[1] );                    
+                    
         # combinations
         if options.doCombos:
-            combiner = combinedClass( chanContainers );
+            combiner = combinedClass( chanContainers,"2l2q+2l2v+lvlv+lvqq" );
             if options.createWorkspace:
                 combiner.createCombinedWorkspace();
             if options.runLimits:                                
@@ -112,47 +125,83 @@ if __name__ == '__main__':
                     arrays_masses[len(channels)].append( masses[i] );
                     arrays_0sigma[len(channels)].append( combiner.lims[3] );
 
+    for i in range(len(masses)-1,-1,-1):
+        # --------------
+        # each channel container
+        chanContainers = [];
+        for a in range(len(channels)):
+            chanContainers.append( chanWP(abspath,channels[a],masses[i],10,00,tmpdir,eosPath) );
+        # --------------
+    
+        if options.getLimits:
+            for a in range(len(chanContainers)): 
+                chanContainers[a].getAsymLimits();
+                if chanContainers[a].lims[3] > 0: 
+                    arrays_masses_env[a].append( masses[i] );
+                    arrays_1sigma[a].append( chanContainers[a].lims[4] );
+                    arrays_2sigma[a].append( chanContainers[a].lims[5] );            
+                    
+        if options.doCombos:
+            if options.getLimits:
+                combiner.getAsymLimits();  
+                if combiner.lims[3] > 0: 
+                    arrays_masses_env[len(channels)].append( masses[i] );
+                    arrays_1sigma[a].append( combiner.lims[4] );
+                    arrays_2sigma[a].append( combiner.lims[5] );            
   
     ## ---------------------------------------------------------        
     
     if options.getLimits:
 
-        if options.doCombos: channels.append("ALL");
+        if options.doCombos: channels.append("2l2q+2l2v+lvlv+lvqq");
 
         # make graphs
         graphs = [];
+        graphs_1sigma = [];
+        graphs_2sigma = [];                
         for a in range(len(channels)):
             print "len(arrays_masses[a]) = ", len(arrays_masses[a])
             graphs.append( ROOT.TGraph( len(arrays_masses[a]), arrays_masses[a], arrays_0sigma[a] ) );
-
+            graphs_1sigma.append( ROOT.TGraph( 2*len(arrays_masses[a]), arrays_masses_env[a], arrays_1sigma[a] ) );
+            graphs_2sigma.append( ROOT.TGraph( 2*len(arrays_masses[a]), arrays_masses_env[a], arrays_2sigma[a] ) );
+                        
         # draw limits!
-        colors = [2,4,6,7,3,1];
-        widths = [2,2,2,2,2,3];        
-        leg = ROOT.TLegend(0.15,0.6,0.4,0.85);
+        colors = [1,4,6,7,3,46,2];
+        widths = [2,2,2,2,2,2,3];        
+        leg = ROOT.TLegend(0.15,0.5,0.4,0.85);
         leg.SetFillStyle(1001);
         leg.SetFillColor(0);    
         leg.SetBorderSize(1);  
         for a in range(len(channels)):
             graphs[a].SetLineColor( colors[a] );        
             graphs[a].SetLineWidth( widths[a] );                    
-            leg.AddEntry(graphs[a],channels[a],"l");
-            
+            leg.AddEntry(graphs[a],channelNames[a],"l");
+            if a == 0:
+                leg.AddEntry(graphs_1sigma[a],"    expected #pm 1 #sigma","f");
+                leg.AddEntry(graphs_2sigma[a],"    expected #pm 2 #sigma","f");
+                                    
         oneLine = ROOT.TF1("oneLine","1",199,1001);
         oneLine.SetLineColor(ROOT.kRed+2);
         oneLine.SetLineWidth(1);
         oneLine.SetLineStyle(2);
                  
         can = ROOT.TCanvas("can","can",1200,800);
-        hrl = can.DrawFrame(199,0.1,1001,100.);
-        hrl.GetYaxis().SetTitle("#sigma_{95CL}/#sigma_{SM}");
+        hrl = can.DrawFrame(599,0.1,1001,10.);
+        hrl.GetYaxis().SetTitle("#mu = #sigma_{95%CL}/#sigma_{SM}");
         hrl.GetXaxis().SetTitle("mass (GeV)");
         can.SetGrid(); 
 
-        for a in range(len(channels)): graphs[a].Draw();
+        for a in range(len(channels)): 
+            graphs_2sigma[a].SetFillColor(ROOT.kYellow)
+            graphs_1sigma[a].SetFillColor(ROOT.kGreen)            
+            if a == 0: graphs_2sigma[a].Draw("f")
+            if a == 0: graphs_1sigma[a].Draw("f")            
+
+            graphs[a].Draw();
 
         oneLine.Draw("LSAMES");
         leg.Draw()
-        ROOT.gPad.SetLogy();
+        #ROOT.gPad.SetLogy();
         can.SaveAs("test.eps");        
                                  
                    

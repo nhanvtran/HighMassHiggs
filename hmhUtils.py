@@ -24,7 +24,7 @@ class workspaceContainer:
         self.wsName      = wsName;
         self.wsDir       = os.path.dirname(wsName);
         self.wsFN        = os.path.basename(wsName);       
-        self.eosLocation = eosLocation;
+        self.eospath     = eosLocation;
         self.olabel      = olabel;
         self.lims        = [-1,-1,-1,-1,-1,-1];        
 
@@ -68,7 +68,7 @@ class workspaceContainer:
         outScript.write("\n"+'cd -');
         outScript.write("\n"+'ls');    
         outScript.write("\n"+command);
-        outScript.write("\n"+'cp higgsCombine*'+self.olabel+'*.root '+self.eosLocation);
+        outScript.write("\n"+'cp higgsCombine*'+self.olabel+'*.root '+self.eospath);
         outScript.close();
         
         # link a condor script to your shell script
@@ -79,10 +79,9 @@ class workspaceContainer:
         condorScript.write("\n"+'Should_Transfer_Files = YES')
         condorScript.write("\n"+'Transfer_Input_Files = '+self.wsName)    
         condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
-        condorScript.write("\n"+'Output = out_$(Cluster).stdout')
-        condorScript.write("\n"+'Error  = out_$(Cluster).stderr')
-        condorScript.write("\n"+'Error  = out_$(Cluster).stderr')
-        condorScript.write("\n"+'Log    = out_$(Cluster).log')
+        condorScript.write("\n"+'Output = out'+self.olabel+'_$(Cluster).stdout')
+        condorScript.write("\n"+'Error  = out'+self.olabel+'_$(Cluster).stderr')
+        condorScript.write("\n"+'Log    = out'+self.olabel+'_$(Cluster).log')
         condorScript.write("\n"+'Notification    = Error')
         condorScript.write("\n"+'Queue 1')
         condorScript.close();
@@ -91,9 +90,10 @@ class workspaceContainer:
         
         os.system("condor_submit "+"subCondor_"+fn)
 
-    def getAsymLimits(self):
-                
-        file = "%s/%s" % (self.eospath,self.outputName);
+    def getAsymLimits(self,mass,channel = "ALL"):
+        
+        outputName = "higgsCombine%s.Asymptotic.mH%03i.root" % (self.olabel,mass);
+        file = "%s/%s" % (self.eospath,outputName);
         
         if not os.path.isfile(file): 
             print "Warning (GetAsymLimits): "+file+" does not exist"
@@ -118,6 +118,8 @@ class workspaceContainer:
             elif t_quantileExpected >= 0.83 and t_quantileExpected <= 0.85: self.lims[4] = t_limit;
             elif t_quantileExpected >= 0.974 and t_quantileExpected <= 0.976: self.lims[5] = t_limit;
             else: print "Unknown quantile!"
+    
+        print "self.lims = ", self.lims
 
 ##########################################################################################################
 ##########################################################################################################
@@ -158,7 +160,20 @@ class combinedClass:
         for i in range(len(self.chanWPs)):
             cpCmmd = "cp %s/*.* %s/." % (self.chanWPs[i].svnDir,self.tmpdir);
             os.system(cpCmmd);
-            
+
+        # temporary!
+        os.chdir(self.tmpdir);
+        if "hzz4l" in allChannels:
+            os.system('sed s/"kmax .."/"kmax \*"/ < comb_hzz4l.txt > new1.txt');
+            os.system('sed s/interf_ggH/#interf_ggH/ < new1.txt > new2.txt');            
+            os.system('mv new2.txt comb_hzz4l.txt');            
+            os.system('rm new1.txt');                                    
+        if "hzz2l2t" in allChannels:
+            os.system('sed s/"heavyHiggsShape_t       shape"/"heavyHiggsShape_t       shapeN2"/ < DataCard_H600_2l2tau_PFIso_7TeV_8TeV_LegacyPaper.txt > test.txt');
+            os.system('mv test.txt DataCard_H600_2l2tau_PFIso_7TeV_8TeV_LegacyPaper.txt');
+        os.chdir(self.cwd);
+        # temporary!
+                    
         # the name of the workspace
         wsName = "%s/ws_%s_%03i_%02i_%02i.root" % (self.opath,self.channel,self.mass,self.cpsq,self.brnew);
         self.wsname = wsName;
@@ -183,7 +198,7 @@ class combinedClass:
         
         # turn into a workspace
         wsName = "%s/ws_%s_%03i_%02i_%02i.root" % (self.opath,self.channel,self.mass,self.cpsq,self.brnew);
-        cmmd = "text2workspace.py %s -o %s" % (ccName,wsName);
+        cmmd = "text2workspace.py %s -o %s &" % (ccName,wsName);
         print cmmd
         os.system(cmmd);
         
@@ -199,8 +214,8 @@ class combinedClass:
     
     def getAsymLimits(self):
         
-        self.wsContainer.getAsymLimits();
-        self.lims = workspaceContainer.lims;
+        self.wsContainer.getAsymLimits(self.mass,self.channel);
+        self.lims = self.wsContainer.lims;
         return self.lims
         
     ##########################################################################################################
@@ -281,8 +296,8 @@ class chanWP:
     
     def getAsymLimits(self):
         
-        self.wsContainer.getAsymLimits();
-        self.lims = workspaceContainer.lims;
+        self.wsContainer.getAsymLimits(self.mass,self.channel);
+        self.lims = self.wsContainer.lims;
         return self.lims
         
     ##########################################################################################################
@@ -325,6 +340,22 @@ class chanWP:
                 self.dcnames.append( "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
             if self.mass >= 170 and self.mass < 600:
                 self.dcnames.append( "hwwlvjj_shape_8TeV.txt" );
+
+        if self.channel == "hwwlvqq_01j":
+            if self.mass >= 600: 
+                self.dcnames.append( "%s_ggH%03i_em_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
+
+        if self.channel == "hwwlvqq_01je":
+            if self.mass >= 600: 
+                self.dcnames.append( "%s_ggH%03i_el_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
+
+        if self.channel == "hwwlvqq_01jm":
+            if self.mass >= 600: 
+                self.dcnames.append( "%s_ggH%03i_mu_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
+
+        if self.channel == "hwwlvqq_2j":
+            if self.mass >= 600: 
+                self.dcnames.append( "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
             
         # hww2l2v
         if self.channel == "hww2l2v":
