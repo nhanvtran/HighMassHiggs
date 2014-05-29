@@ -27,7 +27,7 @@ def getAsymLimits(outpath,label,mass, cpsq, brnew):
     
     if not os.path.isfile(file): 
         print "Warning (GetAsymLimits): "+file+" does not exist"
-        return;
+        return lims;
 
     f = ROOT.TFile(file);
     t = f.Get("limit");
@@ -57,16 +57,16 @@ def getAsymLimits(outpath,label,mass, cpsq, brnew):
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052214/outputs";
-    labels = "ww2l2v+wwlvqq+zz2l2v";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052714/outputs";
+    labels = "comb_4l+2l2v+lvlv+lvqq+2l2t";
     
-    mass  = 300;
+    mass  = 700;
     cpsq  = [01,02,03,05,07,10];  
     brnew = [00,01,02,03,04,05];
 
     cpsqbin  = [0.05,0.15,0.25,0.4,0.6,0.85,1.15]; 
     brnewbin = [-0.05,0.05,0.15,0.25,0.35,0.45,0.55]; 
-    limGrid = ROOT.TH2D("limGrid",";BR_{new};C\'^{2};#mu = #sigma_{95%CL}/#sigma_{SM}",6,array('d',brnewbin),6,array('d',cpsqbin))
+    limGrid = ROOT.TH2D("limGrid",";BR_{new};C\'^{2};#mu = #sigma_{95%CL}/#sigma_{SM}",6,array('d',cpsqbin),6,array('d',brnewbin))
 
     for i in range(len(brnew)):
         for j in range(len(cpsq)):
@@ -75,26 +75,30 @@ if __name__ == '__main__':
             if gamFactor > 1: continue
 
             curlim = getAsymLimits(outpath,labels,mass,cpsq[j],brnew[i])
-            limGrid.SetBinContent(i+1,j+1,curlim[3]);
+            if curlim[3] > 0: limGrid.SetBinContent(j+1,i+1,curlim[3]);
 
     banner = ROOT.TLatex(0.18,0.92,("CMS Preliminary, 7+8 TeV"));
     banner.SetNDC()
     banner.SetTextSize(0.035)
 
-    banner2 = ROOT.TLatex(0.45,0.85,("WWlvlv+ZZ2l2v+WWlvqq"));
+    banner2 = ROOT.TLatex(0.45,0.85,("4l+2l2v+lvlv+lvqq+2l2t"));
     banner2.SetNDC()
     banner2.SetTextSize(0.035)
 
-    banner3 = ROOT.TLatex(0.6,0.80,("m_{H} = 300 GeV"));
+    banner3 = ROOT.TLatex(0.6,0.80,("m_{H} = 700 GeV"));
     banner3.SetNDC()
     banner3.SetTextSize(0.035)
     
     can = ROOT.TCanvas("can","can",1000,800);
-    limGrid.Draw("colz");
+    hrl = can.DrawFrame(0.0,0.0,1.0,0.5);
+    hrl.GetYaxis().SetTitle("BR_{new}");
+    hrl.GetXaxis().SetTitle("C\'^{2}");  
+    limGrid.Draw("colz same");
     banner.Draw();
     banner2.Draw();    
     banner3.Draw();        
-    can.SaveAs("test_2d.eps");
+    ROOT.gPad.RedrawAxis();
+    can.SaveAs("test_2d_700.eps");
 
      
 

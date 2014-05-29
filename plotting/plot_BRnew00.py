@@ -7,7 +7,7 @@ import array
 import sys
 import time
 import ROOT
-from array import array
+from plotUtils import *
 
 ROOT.gROOT.ProcessLine(".L ~/tdrstyle.C");
 ROOT.setTDRStyle();
@@ -17,48 +17,14 @@ ROOT.gStyle.SetPadTopMargin(0.10);
 ROOT.gStyle.SetPalette(1);
 
 ## ===========================================================================================
-
-def getAsymLimits(outpath,label,mass, cpsq, brnew):
-
-    outputName = "higgsCombine_%s_%03i_%02i_%02i.Asymptotic.mH%03i.root" % (label,mass,cpsq,brnew,mass);
-    file = "%s/%s" % (outpath,outputName);
-    print file
-    lims = [0]*6;
-    
-    if not os.path.isfile(file): 
-        print "Warning (GetAsymLimits): "+file+" does not exist"
-        return;
-
-    f = ROOT.TFile(file);
-    t = f.Get("limit");
-    entries = t.GetEntries();
-
-    for i in range(entries):
-
-        t.GetEntry(i);
-        t_quantileExpected = t.quantileExpected;
-        t_limit = t.limit;
-
-        #print "limit: ", t_limit, ", quantileExpected: ",t_quantileExpected;
-        
-        if t_quantileExpected == -1.: lims[0] = t_limit;
-        elif t_quantileExpected >= 0.024 and t_quantileExpected <= 0.026: lims[1] = t_limit;
-        elif t_quantileExpected >= 0.15 and t_quantileExpected <= 0.17: lims[2] = t_limit;            
-        elif t_quantileExpected == 0.5: lims[3] = t_limit;            
-        elif t_quantileExpected >= 0.83 and t_quantileExpected <= 0.85: lims[4] = t_limit;
-        elif t_quantileExpected >= 0.974 and t_quantileExpected <= 0.976: lims[5] = t_limit;
-        else: print "Unknown quantile!"
-
-    return lims;
-
-## ===========================================================================================
 ## ===========================================================================================
 ## ===========================================================================================
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052214/outputs";
-    labels = ["ww2l2v+wwlvqq+zz2l2v"];
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052714/outputs";
+    labels = ["comb_4l+2l2v+lvlv+lvqq+2l2t"];
+    #labels = ["hzz2l2v"];
     mass  = [200,300,400,500,600,700,800,900,1000];
     cpsq  = [01,02,03,05,07,10];
 
@@ -68,27 +34,31 @@ if __name__ == '__main__':
     arrays_1sigma = [];
     arrays_2sigma = [];
     for i in range(len(cpsq)):
-        arrays_masses.append( array('d', []) )
-        arrays_envelo.append( array('d', []) )        
-        arrays.append( array('d', []) )
-        arrays_1sigma.append( array('d', []) )
-        arrays_2sigma.append( array('d', []) )
+        arrays_masses.append( array.array('d', []) )
+        arrays_envelo.append( array.array('d', []) )        
+        arrays.append( array.array('d', []) )
+        arrays_1sigma.append( array.array('d', []) )
+        arrays_2sigma.append( array.array('d', []) )
 
     for i in range(len(cpsq)):
         for j in range(len(mass)):
             curlims = getAsymLimits(outpath,labels[0],mass[j],cpsq[i],00);
-            arrays_masses[i].append( mass[j] );
-            arrays_envelo[i].append( mass[j] );            
-            arrays[i].append(curlims[3]);
-            arrays_1sigma[i].append(curlims[2]);
-            arrays_2sigma[i].append(curlims[1]);
+            if curlims[3] > 0: arrays_masses[i].append( mass[j] );
+            if curlims[3] > 0: arrays_envelo[i].append( mass[j] );            
+            if curlims[3] > 0: arrays[i].append(curlims[3]);
+            if curlims[3] > 0: arrays_1sigma[i].append(curlims[2]);
+            if curlims[3] > 0: arrays_2sigma[i].append(curlims[1]);
+
+
+    print "reverse direction \n \n \n"
+
 
     for i in range(len(cpsq)):
         for j in range(len(mass)-1, -1, -1):
             curlims = getAsymLimits(outpath,labels[0],mass[j],cpsq[i],00);
-            arrays_1sigma[i].append(curlims[4]);
-            arrays_2sigma[i].append(curlims[5]);
-            arrays_envelo[i].append( mass[j] );            
+            if curlims[3] > 0: arrays_1sigma[i].append(curlims[4]);
+            if curlims[3] > 0: arrays_2sigma[i].append(curlims[5]);
+            if curlims[3] > 0: arrays_envelo[i].append( mass[j] );            
 
     # make graphs
     graphs = [];

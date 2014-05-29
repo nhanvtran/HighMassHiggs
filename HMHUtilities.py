@@ -9,7 +9,7 @@ import ROOT
 
 class singleWorkingPoint:
 
-    def __init__(self, label, workpath, outpath, channels, mass, cpsq, brnew):
+    def __init__(self, label, workpath, outpath, channels, mass, cpsq, brnew, productionMode=0):
 
     	self.label    = label;
         self.workpath = workpath;
@@ -21,6 +21,14 @@ class singleWorkingPoint:
         self.cpsq     = cpsq;
         self.brnew    = brnew;
 
+        # if production mode == 0, this is the default
+        # if production mode == 1, this is ggH only
+        # if production mode == 2, this is vbf only
+        self.prodMode = productionMode;
+        self.prodTag  = '';
+        if self.prodMode == 1: self.prodTag = '_ggf';
+        if self.prodMode == 2: self.prodTag = '_vbf';
+
         massdir = "%03i" % mass;
         bsmdir  = "cpsq%02i_brnew%02i" % (cpsq, brnew);
         self.curworkpath = self.workpath+"/work_"+massdir+"_"+bsmdir;1
@@ -28,11 +36,17 @@ class singleWorkingPoint:
         self.dcnames  = [];
         self.getDCNames();
 
-        self.wsName = "ws_%s_%03i_%02i_%02i.root" % (self.label,self.mass,self.cpsq,self.brnew);
+        self.wsBaseName = "ws_%s_%03i_%02i_%02i%s.root" % (self.label,self.mass,self.cpsq,self.brnew,self.prodTag);
+        self.wsName = "%s/workspaces/ws_%s_%03i_%02i_%02i%s.root" % (self.outpath,self.label,self.mass,self.cpsq,self.brnew,self.prodTag);
+        self.wsExists = False;
+        if os.path.isfile(self.wsName): self.wsExists = True;
+
+        self.biglabel = "_%s_%03i_%02i_%02i%s" % (self.label,self.mass,self.cpsq,self.brnew,self.prodTag);
+        self.oName = "%s/outputs/higgsCombine%s.Asymptotic.mH%03i.root" % (self.outpath,self.biglabel,self.mass);
 
 	##########################################################################################################
 
-    def createWorkspace(self, isBatch):
+    def createWorkspace(self, isBatch, overwriteFile=False):
            
         if len(self.dcnames) == 0: return;
         
@@ -40,11 +54,25 @@ class singleWorkingPoint:
         os.chdir(self.curworkpath);
 
         # combine cards for a given channel
-        ccName = "combine_%s_%03i_%02i_%02i.txt" % (self.label,self.mass,self.cpsq,self.brnew);
+        ccName = "%s/workspaces/combine_%s_%03i_%02i_%02i.txt" % (self.outpath,self.label,self.mass,self.cpsq,self.brnew);
         combineCmmd = "combineCards.py ";
         for i in range(len(self.dcnames)): 
-            self.hardFix1(self.dcnames[i]);
+            #if 'interf_ggH' in open(self.dcnames[i]).read(): self.hardFix1(self.dcnames[i]);
+            #if 'DataCard_2l2tau' in self.dcnames[i]: self.hardFix2(self.dcnames[i]);  
+            # !!!hard fixes!!!
+            name1 = "%s_ggH%03i_el_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);
+            name2 = "%s_ggH%03i_mu_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);                
+            name3 = "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);   
+            if self.dcnames[i] == name1 or self.dcnames[i] == name2 or self.dcnames[i] == name3:
+                print "hard fix 3 applied: ", self.dcnames[i]
+                self.hardFix3(self.dcnames[i]);
+            if "hwwof_" in self.dcnames[i] or "hwwsf_" in self.dcnames[i]:
+                print "hard fix 1 applied: ", self.dcnames[i]                
+                self.hardFix1(self.dcnames[i]);
+                    
+
             combineCmmd += " %s" % self.dcnames[i];
+
         combineCmmd += " > %s " % ccName;
         #print combineCmmd
         #os.system(combineCmmd);
@@ -56,12 +84,19 @@ class singleWorkingPoint:
         # remove combined card
         #os.remove(ccName);
         
+        # check if workspace exists
+        if os.path.isfile(self.wsName) and not overwriteFile:
+            print self.wsName, "already exists!"
+            return;
+
         if isBatch:
+            time.sleep(1.);
             self.submitBatchJobMakeWS(combineCmmd,cmmd,self.curworkpath,self.wsName);
 
         else:
             # print "combineCmmd: ", combineCmmd
             # print "cmmd: ", cmmd            
+            time.sleep(1.);
             os.system(combineCmmd);
             time.sleep(1.);
             os.system(cmmd);
@@ -75,26 +110,34 @@ class singleWorkingPoint:
     def runAsymLimit(self, isBatch):
         
         os.chdir( self.curworkpath );
+        #os.chdir( self.outpath + "/outputs" );
 
         # combine options
         meth = "-M Asymptotic"        
         combineOptions = "--run expected";
         #if channel == "ALL": continue; 
-        if "hzz4l" in self.channels: 
+        if "hzz4l" in self.channels or "hzzllll" in self.channels: 
             combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
         #else: continue;
         
-        biglabel = "_%s_%03i_%02i_%02i" % (self.label,self.mass,self.cpsq,self.brnew);
-
-        cmmd = "combine %s %s -n %s -m %03i %s" % (self.wsName,meth,biglabel,self.mass,combineOptions);
-        print cmmd
+        cmmd = "combine %s %s -n %s -m %03i %s" % (self.wsName,meth,self.biglabel,self.mass,combineOptions);
+        #print cmmd
         
+        if not os.path.isfile(self.wsName):
+            print "[runAsymLimit], ", self.wsName, "does not exist!"
+        if os.path.isfile(self.oName):
+            print "[runAsymLimit], ", self.oName, "already exists!"
+            return;
 
-        if isBatch: 
-            self.submitBatchJobCombine(cmmd);
-        else: 
-            os.system(cmmd);
-            os.system('mv higgsCombine*'+biglabel+'*.root '+self.outpath)
+        else:
+            if isBatch: 
+                time.sleep(1.);            
+                self.submitBatchJobCombine(cmmd);
+            else: 
+                os.system(cmmd);
+                time.sleep(1.);                            
+                mvcmmd = "mv higgsCombine%s.Asymptotic.mH%03i.root %s/outputs/." % (self.biglabel,self.mass,self.outpath);
+                os.system(mvcmmd)
 
         os.chdir(self.cwd); 
 
@@ -103,7 +146,7 @@ class singleWorkingPoint:
         currentDir = os.getcwd();
         print "Submitting batch job from: ", currentDir
 
-        fnCore = os.path.splitext(self.wsName)[0];
+        fnCore = os.path.splitext(self.wsBaseName)[0];
         fn = "condorScript_%s" % (fnCore);
         
         # create a dummy bash/csh
@@ -117,7 +160,7 @@ class singleWorkingPoint:
         outScript.write("\n"+'cd -');
         outScript.write("\n"+'ls');    
         outScript.write("\n"+command);
-        outScript.write("\n"+'cp higgsCombine*'+self.label+'*.root '+self.outpath);
+        outScript.write("\n"+'cp higgsCombine*'+self.label+'*.root '+self.outpath+'/outputs');
         outScript.close();
         
         # link a condor script to your shell script
@@ -126,7 +169,7 @@ class singleWorkingPoint:
         condorScript.write("\n"+"Executable = "+fn+".sh")
         condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
         condorScript.write("\n"+'Should_Transfer_Files = YES')
-        condorScript.write("\n"+'Transfer_Input_Files = '+self.wsName)    
+        #condorScript.write("\n"+'Transfer_Input_Files = '+self.wsBaseName)    
         condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
         condorScript.write("\n"+'Output = out'+self.label+'_$(Cluster).stdout')
         condorScript.write("\n"+'Error  = out'+self.label+'_$(Cluster).stderr')
@@ -148,6 +191,13 @@ class singleWorkingPoint:
 
         # hzz2l2v
         if "hzz2l2v" in self.channels:
+
+            # -rw-r--r-- 1 ntran us_cms 3627 May 13 00:16 hzz2l2v_500_8TeV_eegeq1jets.dat
+            # -rw-r--r-- 1 ntran us_cms 3628 May 13 00:16 hzz2l2v_500_8TeV_mumueq0jets.dat
+            # -rw-r--r-- 1 ntran us_cms 3503 May 13 00:16 hzz2l2v_500_8TeV_mumuvbf.dat
+            # -rw-r--r-- 1 ntran us_cms 3624 May 13 00:16 hzz2l2v_500_8TeV_eeeq0jets.dat
+            # -rw-r--r-- 1 ntran us_cms 3499 May 13 00:16 hzz2l2v_500_8TeV_eevbf.dat
+            # -rw-r--r-- 1 ntran us_cms 3631 May 13 00:16 hzz2l2v_500_8TeV_mumugeq1jets.dat            
             if self.mass >= 200:         
                 self.dcnames.append( "%s_%03i_8TeV_eeeq0jets.dat"    % ("hzz2l2v",self.mass) );
                 self.dcnames.append( "%s_%03i_8TeV_eegeq1jets.dat"   % ("hzz2l2v",self.mass) );
@@ -159,45 +209,34 @@ class singleWorkingPoint:
         # hzz2l2t
         if "hzz2l2t" in self.channels:       
             if self.mass >= 200:         
-                self.dcnames.append( "DataCard_2l2tau_PFIso_7TeV_LegacyPaper.txt" );
-                self.dcnames.append( "DataCard_2l2tau_PFIso_8TeV_LegacyPaper.txt" );
+                #self.dcnames.append( "DataCard_2l2tau_PFIso_7TeV_LegacyPaper.txt" );
+                #self.dcnames.append( "DataCard_2l2tau_PFIso_8TeV_LegacyPaper.txt" );
                 #self.dcnames.append( "DataCard_H%03i_2l2tau_PFIso_7TeV_8TeV_LegacyPaper.txt"    % (self.mass) );
+                if not self.mass == 3000: self.dcnames.append( "DataCard_2l2tau_7TeV.txt" );
+                if not self.mass == 3000: self.dcnames.append( "DataCard_2l2tau_8TeV.txt" );                
             
         # 4l  
-        if "hzz4l" in self.channels:               
+        if "hzz4l" in self.channels or "hzzllll" in self.channels:               
             self.dcnames.append( "comb_%s.txt"                   % ("hzz4l") );
                                                             
         # hzz2l2q
         if "hzz2l2q" in self.channels:               
+            # if self.mass >= 230:
+            #     self.dcnames.append( "%s_VBF_8TeV.txt"               % ("hzz2l2q") );            
+            #     if self.mass >= 400: self.dcnames.append( "%s_llallbMerged_8TeV.txt"      % ("hzz2l2q") );
+            #     if self.mass <= 800: self.dcnames.append( "%s_llallb_8TeV.txt"            % ("hzz2l2q") );
             if self.mass >= 230:
-                self.dcnames.append( "%s_VBF_8TeV.txt"               % ("hzz2l2q") );            
-                if self.mass >= 400: self.dcnames.append( "%s_llallbMerged_8TeV.txt"      % ("hzz2l2q") );
-                if self.mass <= 800: self.dcnames.append( "%s_llallb_8TeV.txt"            % ("hzz2l2q") );
+                self.dcnames.append( "hzz2l2q_Combined_8TeV.txt" );
                             
         # hwwlvqq
         if "hwwlvqq" in self.channels:               
             if self.mass >= 600: 
                 self.dcnames.append( "%s_ggH%03i_el_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
                 self.dcnames.append( "%s_ggH%03i_mu_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
-                if not self.mass == 900: self.dcnames.append( "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
+                self.dcnames.append( "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );     
+
             if self.mass >= 170 and self.mass < 600:
                 self.dcnames.append( "hwwlvjj_shape_8TeV_cpsq%02i_brnew%02i.txt" % (self.cpsq,self.brnew) );
-
-#        if self.channel == "hwwlvqq_01j":
-#            if self.mass >= 600: 
-#                self.dcnames.append( "%s_ggH%03i_em_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
-#
-#        if self.channel == "hwwlvqq_01je":
-#            if self.mass >= 600: 
-#                self.dcnames.append( "%s_ggH%03i_el_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
-#
-#        if self.channel == "hwwlvqq_01jm":
-#            if self.mass >= 600: 
-#                self.dcnames.append( "%s_ggH%03i_mu_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
-#
-#        if self.channel == "hwwlvqq_2j":
-#            if self.mass >= 600: 
-#                self.dcnames.append( "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
 
         # hww2l2v
         if "hww2l2v" in self.channels:               
@@ -272,9 +311,23 @@ class singleWorkingPoint:
 
 
     def hardFix1(self,dcname):
-        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
-        os.system(c1);
-        os.system('sed s/interf_ggH/#interf_ggH/ < new1.txt > new2.txt');
+        #c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        #os.system(c1);
+        os.system('sed s/interf_ggH/#interf_ww_ggH/ < '+dcname+' > new2.txt');
         os.system('mv new2.txt '+dcname);
-        os.system('rm new1.txt');
+        #os.system('rm new1.txt');
+
+    def hardFix2(self,dcname):
+        c1 = 'sed s/"CMS_hzz2l2tau_ZjetBkgMMEM"/"#CMS_hzz2l2tau_ZjetBkgMMEM"/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        #os.system('sed s/interf_ggH/#interf_ggH/ < new1.txt > new2.txt');
+        os.system('mv new1.txt '+dcname);
+        os.system('rm new1.txt');        
+    
+    def hardFix3(self,dcname):
+        c1 = 'sed s/CMS_scale_j/#CMS_scale_ww_j/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/CMS_res_j/#CMS_res_ww_j/ < new1.txt > new2.txt');
+        os.system('mv new2.txt '+dcname);
+        os.system('rm new1.txt');   
 
