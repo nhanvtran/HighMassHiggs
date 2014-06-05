@@ -18,6 +18,35 @@ ROOT.gStyle.SetPalette(1);
 
 ## ===========================================================================================
 
+############################################
+#            Job steering                  #
+############################################
+from optparse import OptionParser
+
+parser = OptionParser()
+
+parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
+parser.add_option('--mass',action="store",type="int",dest="mass",default=-1)
+
+(options, args) = parser.parse_args()
+
+## ===========================================================================================
+## ===========================================================================================
+## ===========================================================================================
+def GetContours( th2 ):
+
+    limGridGraph = ROOT.TGraph2D(th2);    
+    contours = [1.0];
+    limGridGraph.GetHistogram().SetContour(1,array('d',contours));
+    limGridGraph.Draw("cont z list"); 
+
+    contLevel = limGridGraph.GetContourList(1.0);
+    print "N contours = ",contLevel.GetSize();
+    contours = [];
+    for i in range(contLevel.GetSize()):
+        contours.append( contLevel.At(i) );
+    return contours;
+
 def getAsymLimits(outpath,label,mass, cpsq, brnew):
 
     outputName = "higgsCombine_%s_%03i_%02i_%02i.Asymptotic.mH%03i.root" % (label,mass,cpsq,brnew,mass);
@@ -57,10 +86,10 @@ def getAsymLimits(outpath,label,mass, cpsq, brnew):
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052714/outputs";
-    labels = "comb_4l+2l2v+lvlv+lvqq+2l2t";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052814/outputs";
+    labels = "combined";
     
-    mass  = 700;
+    mass  = options.mass;
     cpsq  = [01,02,03,05,07,10];  
     brnew = [00,01,02,03,04,05];
 
@@ -77,29 +106,57 @@ if __name__ == '__main__':
             curlim = getAsymLimits(outpath,labels,mass,cpsq[j],brnew[i])
             if curlim[3] > 0: limGrid.SetBinContent(j+1,i+1,curlim[3]);
 
-    banner = ROOT.TLatex(0.18,0.92,("CMS Preliminary, 7+8 TeV"));
+    banner = ROOT.TLatex(0.16,0.92,("CMS Preliminary, #leq 5.0 fb^{-1} at #sqrt{s}=7 TeV, #leq 19.6 fb^{-1} at #sqrt{s}=8 TeV"));
     banner.SetNDC()
     banner.SetTextSize(0.035)
 
-    banner2 = ROOT.TLatex(0.45,0.85,("4l+2l2v+lvlv+lvqq+2l2t"));
+    banner2 = ROOT.TLatex(0.50,0.85,("all channels combined"));
     banner2.SetNDC()
     banner2.SetTextSize(0.035)
 
-    banner3 = ROOT.TLatex(0.6,0.80,("m_{H} = 700 GeV"));
+    banner3 = ROOT.TLatex(0.6,0.80,("m_{H} = "+str(options.mass)+" GeV"));
     banner3.SetNDC()
     banner3.SetTextSize(0.035)
-    
+
+    banner4 = ROOT.TLatex(0.63,0.60,("#Gamma\'/#Gamma_{SM} = 1"));
+    banner4.SetNDC()
+    banner4.SetTextSize(0.035)
+    banner4.SetTextColor(15);
+
+    limGridGr = ROOT.TGraph2D(limGrid);    
+    contours = GetContours(limGrid);
+
+    fSM = ROOT.TF1("fSM","1-x",0.1,0.7);
+
+    leg = ROOT.TLegend(0.35,0.18,0.70,0.45);
+    leg.SetFillStyle(0);
+    leg.SetFillColor(0);    
+    leg.SetBorderSize(0);  
+    leg.AddEntry(contours[0],"Expected 95% CL limit","L");
+
     can = ROOT.TCanvas("can","can",1000,800);
-    hrl = can.DrawFrame(0.0,0.0,1.0,0.5);
+    hrl = can.DrawFrame(0.1,0.0,0.7,0.5);
     hrl.GetYaxis().SetTitle("BR_{new}");
     hrl.GetXaxis().SetTitle("C\'^{2}");  
-    limGrid.Draw("colz same");
+    limGridGr.Draw("colz same");
+    for i in range(len(contours)): 
+        contours[i].SetLineWidth(2);
+        contours[i].Draw("L");
+    fSM.SetLineWidth(4);
+    fSM.SetLineColor(15);
+    # fSM.SetFillColor(15);
+    # fSM.SetFillStyle(3004);    
+    fSM.SetLineStyle(2);
+    fSM.Draw("Lsame");
+
     banner.Draw();
     banner2.Draw();    
     banner3.Draw();        
+    banner4.Draw();   
+    leg.Draw();         
     ROOT.gPad.RedrawAxis();
-    can.SaveAs("test_2d_700.eps");
-
+    can.SaveAs("combined_brnewVcpsq_"+str(options.mass)+".eps");
+    can.SaveAs("combined_brnewVcpsq_"+str(options.mass)+".pdf");
      
 
 

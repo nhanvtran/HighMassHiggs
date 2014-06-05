@@ -70,12 +70,17 @@ if __name__ == '__main__':
         graphs_2sigma.append( ROOT.TGraph( len(2*arrays_masses[a]), arrays_envelo[a], arrays_2sigma[a] ) );
 
 	# plot...
+    banner = ROOT.TLatex(0.20,0.92,("CMS Preliminary, #leq 5.0 fb^{-1} at #sqrt{s}=7 TeV, #leq 19.6 fb^{-1} at #sqrt{s}=8 TeV"));
+    banner.SetNDC()
+    banner.SetTextSize(0.035)
+
     colors = [1,4,6,7,3,46,2];
     widths = [2,2,2,2,2,2,3]; 
-    leg = ROOT.TLegend(0.60,0.12,0.85,0.35);
+    leg = ROOT.TLegend(0.50,0.18,0.85,0.35);
     leg.SetFillStyle(1001);
     leg.SetFillColor(0);    
     leg.SetBorderSize(1);  
+    leg.SetNColumns(2);
     for a in range(len(labels)):
         graphs[a].SetLineColor( colors[a] );        
         graphs[a].SetLineWidth( widths[a] );                    
@@ -87,7 +92,7 @@ if __name__ == '__main__':
     oneLine.SetLineStyle(2);
              
     can = ROOT.TCanvas("can","can",1200,800);
-    hrl = can.DrawFrame(199,0.05,1001,15.);
+    hrl = can.DrawFrame(199,0.01,1001,15.);
     hrl.GetYaxis().SetTitle("#mu = #sigma_{95%CL}/#sigma_{SM}");
     hrl.GetXaxis().SetTitle("mass (GeV)");
     can.SetGrid(); 
@@ -97,9 +102,10 @@ if __name__ == '__main__':
 #            graphs_1sigma[a].SetFillColor(ROOT.kGreen)            
 #            if a == 5: graphs_2sigma[a].Draw("f")
 #            if a == 5: graphs_1sigma[a].Draw("f")            
-        graphs[a].Draw();
+        graphs[a].Draw("c");
 
     oneLine.Draw("LSAMES");
+    banner.Draw();
     leg.Draw()
     ROOT.gPad.SetLogy();
     can.SaveAs("test.eps");       

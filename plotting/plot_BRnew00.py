@@ -22,10 +22,10 @@ ROOT.gStyle.SetPalette(1);
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052714/outputs";
-    labels = ["comb_4l+2l2v+lvlv+lvqq+2l2t"];
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052814/outputs";
+    labels = ["combined"];
     #labels = ["hzz2l2v"];
-    mass  = [200,300,400,500,600,700,800,900,1000];
+    mass  = [200,250,300,350,400,500,600,700,800,900,1000];
     cpsq  = [01,02,03,05,07,10];
 
     arrays_masses = [];
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     banner.SetNDC()
     banner.SetTextSize(0.035)
 
-    banner2 = ROOT.TLatex(0.2,0.2,("WWlvlv+ZZ2l2v+WWlvqq: BR_{new} = 0"));
+    banner2 = ROOT.TLatex(0.2,0.2,("combined: BR_{new} = 0"));
     banner2.SetNDC()
     banner2.SetTextSize(0.04)
 
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 #            graphs_1sigma[a].SetFillColor(ROOT.kGreen)            
 #            if a == 5: graphs_2sigma[a].Draw("f")
 #            if a == 5: graphs_1sigma[a].Draw("f")            
-        graphs[a].Draw();
+        graphs[a].Draw("C");
 
     oneLine.Draw("LSAMES");
     leg.Draw();
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     banner2.Draw();    
     ROOT.gPad.SetLogy();
     can.SaveAs("test_BRnew00.eps");       
-
+    can.SaveAs("test_BRnew00.pdf");       
 
 
 

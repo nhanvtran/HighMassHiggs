@@ -23,6 +23,8 @@ parser.add_option('--makeWorkingDirs',action="store_true",dest="makeWorkingDirs"
 parser.add_option('--runLimits',action="store_true",dest="runLimits",default=False,help='do training')
 parser.add_option('--mkWkspace',action="store_true",dest="mkWkspace",default=False,help='do training')
 parser.add_option('--isBatch',action="store_true",dest="isBatch",default=False,help='do training')
+parser.add_option('--vbfOnly',action="store_true",dest="vbfOnly",default=False,help='do training')
+parser.add_option('--ggfOnly',action="store_true",dest="ggfOnly",default=False,help='do training')
 
 parser.add_option('--mass',action="store",type="int",dest="mass",default=-1)
 parser.add_option('--cpsq',action="store",type="int",dest="cpsq",default=-1)
@@ -47,20 +49,20 @@ def makeWorkingDirs( svnpath, workdir, channels, mass, cpsq, brnew ):
     else:
         os.makedirs(curworkpath)
 
-        for i in range(len(channels)):
-            localpath = channels[i] + "/" + massdir + "/" + bsmdir + "/";
-            svnDir = svnpath + "/" + localpath;
-            print svnDir
-            cpCmmd = "cp %s/*.* %s/." % (svnDir,curworkpath);
-            os.system(cpCmmd);
-            time.sleep(0.5);
-        
-        rmCmmd = "rm %s/out*" % (curworkpath);
-        os.system(rmCmmd);
+    for i in range(len(channels)):
+        localpath = channels[i] + "/" + massdir + "/" + bsmdir + "/";
+        svnDir = svnpath + "/" + localpath;
+        print svnDir
+        cpCmmd = "cp %s/*.* %s/." % (svnDir,curworkpath);
+        os.system(cpCmmd);
         time.sleep(0.5);
-        rmCmmd = "rm %s/condor*" % (curworkpath);
-        os.system(rmCmmd);    
-        time.sleep(0.5);
+    
+    rmCmmd = "rm %s/out*" % (curworkpath);
+    os.system(rmCmmd);
+    time.sleep(0.5);
+    rmCmmd = "rm %s/condor*" % (curworkpath);
+    os.system(rmCmmd);    
+    time.sleep(0.5);
 
 if __name__ == '__main__':
 
@@ -75,13 +77,16 @@ if __name__ == '__main__':
     #channels = ["hzzllll"];#,"hzz2l2q","hzz2l2t","hzz4l"];    
     #cpsq  = [01,02,03,05,07,10];
     cpsq  = [01,02,03,05,07,10];    
-    brnew = [01,02,03,04,05];
+    brnew = [00,01,02,03,04,05];
     mass  = [200,250,300,350,400,500,600,700,800,900,1000];
     #mass  = [200,230,250,270,300,350,400,440,500,540,600,700,800,900,1000];
 
     if options.cpsq  > 0: cpsq  = [options.cpsq];
     if options.brnew >= 0: brnew = [options.brnew];
     if options.mass  > 0: mass  = [options.mass];
+    productionMode = 0;
+    if options.ggfOnly: productionMode = 1;
+    if options.vbfOnly: productionMode = 2;
 
     ctr = 0;
     for i in range(len(mass)):
@@ -103,13 +108,12 @@ if __name__ == '__main__':
                 #labels = ["hzz2l2q","combined"]
                 labels = ["combined"]
                 #labels = ["hwwlvqq"];
-                #labels = ["comb_5"];
 
                 if options.makeWorkingDirs:
                     makeWorkingDirs( svnpath, workdir, channels, mass[i], cpsq[j], brnew[k] );
 
                 for aa in range(len(channelsToRun)):
-                    testWP = singleWorkingPoint( labels[aa], workdir, outpath, channelsToRun[aa], mass[i], cpsq[j], brnew[k])
+                    testWP = singleWorkingPoint( labels[aa], workdir, outpath, channelsToRun[aa], mass[i], cpsq[j], brnew[k], productionMode)
                     if options.mkWkspace: 
                         testWP.createWorkspace(options.isBatch,False);
                     if options.runLimits: testWP.runAsymLimit(options.isBatch);

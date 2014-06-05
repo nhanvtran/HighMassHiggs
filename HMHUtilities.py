@@ -69,38 +69,46 @@ class singleWorkingPoint:
             if "hwwof_" in self.dcnames[i] or "hwwsf_" in self.dcnames[i]:
                 print "hard fix 1 applied: ", self.dcnames[i]                
                 self.hardFix1(self.dcnames[i]);
-                    
-
+                
             combineCmmd += " %s" % self.dcnames[i];
 
         combineCmmd += " > %s " % ccName;
-        #print combineCmmd
-        #os.system(combineCmmd);
-        
-        # turn into a workspace
-        cmmd = "text2workspace.py %s -o %s" % (ccName,self.wsName);
-        #if not isBatch: cmmd += " &";
-        
-        # remove combined card
-        #os.remove(ccName);
-        
+                        
         # check if workspace exists
         if os.path.isfile(self.wsName) and not overwriteFile:
             print self.wsName, "already exists!"
             return;
 
+        # make combined card
+        time.sleep(0.5);
+        os.system(combineCmmd);
+
+        # turn into a workspace
+        t2wOption = '';
+        if self.prodMode > 0:
+            # grab all the signal processes
+            signalnames = self.getSignalProcesses(ccName);
+            rnames = ['r_ggf','r_vbf','r_oth'];
+            rvalue = [1,0,0];
+            if self.prodMode == 2: rvalue = [0,1,0];            
+            t2wOption += " -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel --PO verbose ";
+            for i in range(len(signalnames)):
+                if len(signalnames[i]) > 0: 
+                    t2wOption += ' --PO \'map=';
+                    for j in range(len(signalnames[i])):
+                        if j == 0: t2wOption += signalnames[i][j]
+                        else: t2wOption += ","+signalnames[i][j]
+                    t2wOption += ':'+rnames[i]+'['+str(rvalue[i])+']\'';
+
+        cmmd = "text2workspace.py %s -o %s %s" % (ccName,self.wsName,t2wOption);        
+
         if isBatch:
             time.sleep(1.);
-            self.submitBatchJobMakeWS(combineCmmd,cmmd,self.curworkpath,self.wsName);
+            self.submitBatchJobMakeWS(cmmd,self.curworkpath,self.wsName);
 
         else:
-            # print "combineCmmd: ", combineCmmd
-            # print "cmmd: ", cmmd            
-            time.sleep(1.);
-            os.system(combineCmmd);
             time.sleep(1.);
             os.system(cmmd);
-
         
         # come back
         os.chdir(self.cwd);
@@ -113,15 +121,38 @@ class singleWorkingPoint:
         #os.chdir( self.outpath + "/outputs" );
 
         # combine options
-        meth = "-M Asymptotic"        
-        combineOptions = "--run expected";
-        #if channel == "ALL": continue; 
-        if "hzz4l" in self.channels or "hzzllll" in self.channels: 
-            combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
-        #else: continue;
+        meth = '';
+        if self.prodMode == 0:
+            meth = "-M Asymptotic"        
+            combineOptions = "--run expected";
+            #if channel == "ALL": continue; 
+            if "hzz4l" in self.channels or "hzzllll" in self.channels: 
+                combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
+            #else: continue;
+
+        if self.prodMode == 1 or self.prodMode == 2:
+            meth = "-M MultiDimFit"        
+            # grab all the signal processes
+            ccName = "%s/workspaces/combine_%s_%03i_%02i_%02i.txt" % (self.outpath,self.label,self.mass,self.cpsq,self.brnew);
+            signalnames = self.getSignalProcesses(ccName);
+            rnames = ['r_ggf','r_vbf','r_oth'];
+            poi = '';
+            if self.prodMode == 1: poi = 'r_ggf'
+            if self.prodMode == 2: poi = 'r_vbf'
+            otherpois = [];
+            for i in range(len(signalnames)):
+                if len(signalnames[i]) > 0 and not rnames[i] == poi: otherpois.append(rnames[i]);
+
+            combineOptions = "-t -1 --expectSignal=1";
+
+            combineOptions += " -P %s --floatOtherPOIs=0 --algo=grid --points=100 --setPhysicsModelParameterRange %s=%02i,%02i" % (poi,poi,0,15);
+            combineOptions += " --setPhysicsModelParameters "
+            for i in range(len(otherpois)):
+                if i == 0: combineOptions += "%s=0" % (otherpois[i]);
+                else: combineOptions += ",%s=0" % (otherpois[i]);
         
         cmmd = "combine %s %s -n %s -m %03i %s" % (self.wsName,meth,self.biglabel,self.mass,combineOptions);
-        #print cmmd
+        print cmmd
         
         if not os.path.isfile(self.wsName):
             print "[runAsymLimit], ", self.wsName, "does not exist!"
@@ -140,6 +171,53 @@ class singleWorkingPoint:
                 os.system(mvcmmd)
 
         os.chdir(self.cwd); 
+
+    ##########################################################################################################
+
+    def submitBatchJobMakeWS(self, command2, workdir, wsName):
+            
+        currentDir = os.getcwd();
+        print "Submitting batch job from: ", currentDir
+
+        fnCore = os.path.splitext(os.path.basename(wsName))[0];
+        fn = "condorScript_mkws_%s" % (fnCore);
+        
+        # create a dummy bash/csh
+        outScript=open(fn+".sh","w");
+        
+        outScript.write('#!/bin/bash');
+        outScript.write("\n"+'date');
+        outScript.write("\n"+'source /uscmst1/prod/sw/cms/bashrc prod');
+        outScript.write("\n"+'cd '+self.cwd);
+        outScript.write("\n"+'eval `scram runtime -sh`');
+        outScript.write("\n"+'cd -');
+        outScript.write("\n"+'cp '+workdir+'/* .');
+        outScript.write("\n"+'ls');    
+        #outScript.write("\n"+command1);
+        outScript.write("\n"+command2);
+        outScript.write("\n"+'cp ws_*.root '+workdir);
+        outScript.close();
+        
+        # link a condor script to your shell script
+        condorScript=open("subCondor_mkws_"+fn,"w");
+        condorScript.write('universe = vanilla')
+        condorScript.write("\n"+"Executable = "+fn+".sh")
+        condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
+        condorScript.write("\n"+'Should_Transfer_Files = YES')
+        #condorScript.write("\n"+'Transfer_Input_Files = '+self.wsName)
+        condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
+        condorScript.write("\n"+'Output = out'+fnCore+'_$(Cluster).stdout')
+        condorScript.write("\n"+'Error  = out'+fnCore+'_$(Cluster).stderr')
+        condorScript.write("\n"+'Log    = out'+fnCore+'_$(Cluster).log')
+        condorScript.write("\n"+'Notification    = Error')
+        condorScript.write("\n"+'Queue 1')
+        condorScript.close();
+        
+        # submit the condor job 
+        
+        os.system("condor_submit "+"subCondor_mkws_"+fn)                
+
+    ##########################################################################################################
 
     def submitBatchJobCombine(self, command):
             
@@ -265,49 +343,34 @@ class singleWorkingPoint:
     ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
-        
-    def submitBatchJobMakeWS(self, command1, command2, workdir, wsName):
-            
-        currentDir = os.getcwd();
-        print "Submitting batch job from: ", currentDir
-
-        fnCore = os.path.splitext(os.path.basename(wsName))[0];
-        fn = "condorScript_mkws_%s" % (fnCore);
-        
-        # create a dummy bash/csh
-        outScript=open(fn+".sh","w");
-        
-        outScript.write('#!/bin/bash');
-        outScript.write("\n"+'date');
-        outScript.write("\n"+'source /uscmst1/prod/sw/cms/bashrc prod');
-        outScript.write("\n"+'cd '+self.cwd);
-        outScript.write("\n"+'eval `scram runtime -sh`');
-        outScript.write("\n"+'cd -');
-        outScript.write("\n"+'cp '+workdir+'/* .');
-        outScript.write("\n"+'ls');    
-        outScript.write("\n"+command1);
-        outScript.write("\n"+command2);
-        outScript.write("\n"+'cp ws_*.root '+workdir);
-        outScript.close();
-        
-        # link a condor script to your shell script
-        condorScript=open("subCondor_mkws_"+fn,"w");
-        condorScript.write('universe = vanilla')
-        condorScript.write("\n"+"Executable = "+fn+".sh")
-        condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
-        condorScript.write("\n"+'Should_Transfer_Files = YES')
-        #condorScript.write("\n"+'Transfer_Input_Files = '+self.wsName)
-        condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
-        condorScript.write("\n"+'Output = out'+fnCore+'_$(Cluster).stdout')
-        condorScript.write("\n"+'Error  = out'+fnCore+'_$(Cluster).stderr')
-        condorScript.write("\n"+'Log    = out'+fnCore+'_$(Cluster).log')
-        condorScript.write("\n"+'Notification    = Error')
-        condorScript.write("\n"+'Queue 1')
-        condorScript.close();
-        
-        # submit the condor job 
-        
-        os.system("condor_submit "+"subCondor_mkws_"+fn)                
+    def getSignalProcesses(self,ccname):
+        file = open(ccname,'r');
+        # get all the signals
+        #filelist = file.readlines();
+        lists = [];
+        signallist = [];
+        for line in file:
+            splitline = line.strip().split();
+            lists.append( splitline );
+            #print splitline
+        for i in range(len(lists)-2):
+            if lists[i][0] == "bin" and lists[i+1][0] == "process" and lists[i+2][0] == "process":
+                #print len(lists[i]),len(lists[i+1]),len(lists[i+2])
+                for j in range(1,len(lists[i+2])):
+                    # do stuff
+                    if int(lists[i+2][j]) <= 0: signallist.append(lists[i][j]+"/"+lists[i+1][j])
+                break;
+        del lists[:];
+        #print signallist;
+        # split up the signals
+        ggfList = [];
+        vbfList = [];
+        othList = [];
+        for i in range(len(signallist)):
+            if "ggH" in signallist[i] or "GGH" in signallist[i]:   ggfList.append(signallist[i]);
+            elif "qqH" in signallist[i] or "VBF" in signallist[i]: vbfList.append(signallist[i]);
+            else: othList.append(signallist[i]);
+        return [ggfList,vbfList,othList];
 
 
     def hardFix1(self,dcname):
