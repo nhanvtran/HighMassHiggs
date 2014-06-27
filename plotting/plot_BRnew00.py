@@ -22,9 +22,9 @@ ROOT.gStyle.SetPalette(1);
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052814/outputs";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_062414/outputs";
     labels = ["combined"];
-    #labels = ["hzz2l2v"];
+    #labels = ["hzz2l2q"];
     mass  = [200,250,300,350,400,500,600,700,800,900,1000];
     cpsq  = [01,02,03,05,07,10];
 
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     oneLine.SetLineStyle(2);
              
     can = ROOT.TCanvas("can","can",1200,800);
-    hrl = can.DrawFrame(199,0.01,1001,15.);
+    hrl = can.DrawFrame(199,0.01,1001,25.);
     hrl.GetYaxis().SetTitle("#mu = #sigma_{95%CL}/#sigma_{SM}");
     hrl.GetXaxis().SetTitle("mass (GeV)");
     can.SetGrid(); 
@@ -105,15 +105,15 @@ if __name__ == '__main__':
 #            graphs_1sigma[a].SetFillColor(ROOT.kGreen)            
 #            if a == 5: graphs_2sigma[a].Draw("f")
 #            if a == 5: graphs_1sigma[a].Draw("f")            
-        graphs[a].Draw("C");
+        graphs[a].Draw("PL");
 
     oneLine.Draw("LSAMES");
     leg.Draw();
     banner.Draw();
     banner2.Draw();    
     ROOT.gPad.SetLogy();
-    can.SaveAs("test_BRnew00.eps");       
-    can.SaveAs("test_BRnew00.pdf");       
+    can.SaveAs("plots/test_BRnew00.eps");       
+    can.SaveAs("plots/test_BRnew00.pdf");       
 
 
 

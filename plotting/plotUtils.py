@@ -9,9 +9,9 @@ import ROOT
 
 ## ===========================================================================================
 
-def getAsymLimits(outpath,label,mass, cpsq, brnew):
+def getAsymLimits(outpath,label,mass, cpsq, brnew,postfix=""):
 
-    outputName = "higgsCombine_%s_%03i_%02i_%02i.Asymptotic.mH%03i.root" % (label,mass,cpsq,brnew,mass);
+    outputName = "higgsCombine_%s_%03i_%02i_%02i%s.Asymptotic.mH%03i.root" % (label,mass,cpsq,brnew,postfix,mass);
     file = "%s/%s" % (outpath,outputName);
     print file
     lims = [0]*6;
@@ -22,8 +22,13 @@ def getAsymLimits(outpath,label,mass, cpsq, brnew):
 
     f = ROOT.TFile(file);
     t = f.Get("limit");
-    entries = t.GetEntries();
 
+    #if not t.GetListOfKeys().Contains("limit"): 
+    if not t: 
+        print "file is corrupted";
+        return lims
+
+    entries = t.GetEntries();
     for i in range(entries):
 
         t.GetEntry(i);
@@ -95,7 +100,11 @@ def getMultiDimLimits(outpath,label,postfix,mass, cpsq, brnew):
 
     prevr   = 99999.;
     prevnll = 99999.;
+    crossings = [];
+
     the_r   = 99999.;
+
+    #print "entries = ",entries;
     for i in range(1,entries):
 
         t.GetEntry(i);
@@ -103,29 +112,96 @@ def getMultiDimLimits(outpath,label,postfix,mass, cpsq, brnew):
         curnll = getattr(t, "deltaNLL");
 
         if i > 0:
-            if (curnll > 3.96 and prevnll < 3.96) or (curnll < 3.96 and prevnll > 3.96):    
-                print curr,curnll
-                print prevr,prevnll
+            #print i,curr,curnll
+            if (curnll > 3.96 and prevnll < 3.96) and curr < 1000:
+                crossings.append( curr );
+            if (curnll < 3.96 and prevnll > 3.96) and prevr < 1000:    
+                crossings.append( prevr );
+            #     print i,curr,curnll
+            #     print prevr,prevnll
 
-                x_a = array.array('d', []);
-                y_a = array.array('d', []);
+            #     x_a = array.array('d', []);
+            #     y_a = array.array('d', []);
 
-                x_a.append(prevnll); x_a.append(curnll);
-                y_a.append(prevr  ); y_a.append(curr);
-                graph = ROOT.TGraph(len(x_a),x_a,y_a);
-                val = graph.Eval(3.96);
-                if val < the_r: 
-                    the_r = val;
-                    break;
+            #     x_a.append(prevnll); x_a.append(curnll);
+            #     y_a.append(prevr  ); y_a.append(curr);
+            #     graph = ROOT.TGraph(len(x_a),x_a,y_a);
+            #     val = graph.Eval(3.96);
+            #     if val < the_r: 
+            #         the_r = val;
+            #         break;
 
         prevnll = curnll;
         prevr   = curr;
 
+    print crossings
+    if len(crossings) > 0: the_r = max(crossings);
+    else: the_r = 1000;
 
-    print "the_r = ", the_r
+    print "the_r = ",the_r
     return the_r;
 
+def getMultiDimLimitsOne(outputName,postfix):
 
+    #outputName = filename;
+    file = outputName;
+    f = ROOT.TFile(outputName);
+    print file
+
+    if not os.path.isfile(file): 
+        print "Warning (GetAsymLimits): "+file+" does not exist"
+        return 0;
+
+    t = f.Get("limit");
+    entries = t.GetEntries();
+    
+    x_a = array.array('d', []);
+    y_a = array.array('d', []);
+
+    #mode = postfix.replace('_','');
+
+    prevr   = 99999.;
+    prevnll = 99999.;
+    crossings = [];
+
+    the_r   = 99999.;
+
+    #print "entries = ",entries;
+    for i in range(1,entries):
+
+        t.GetEntry(i);
+        curr = getattr(t,"r"+postfix);
+        curnll = getattr(t, "deltaNLL");
+
+        if i > 0:
+            #print i,curr,curnll
+            if (curnll > 3.96 and prevnll < 3.96) and curr < 1000:
+                crossings.append( curr );
+            if (curnll < 3.96 and prevnll > 3.96) and prevr < 1000:    
+                crossings.append( prevr );
+            #     print i,curr,curnll
+            #     print prevr,prevnll
+
+            #     x_a = array.array('d', []);
+            #     y_a = array.array('d', []);
+
+            #     x_a.append(prevnll); x_a.append(curnll);
+            #     y_a.append(prevr  ); y_a.append(curr);
+            #     graph = ROOT.TGraph(len(x_a),x_a,y_a);
+            #     val = graph.Eval(3.96);
+            #     if val < the_r: 
+            #         the_r = val;
+            #         break;
+
+        prevnll = curnll;
+        prevr   = curr;
+
+    print crossings
+    if len(crossings) > 0: the_r = max(crossings);
+    else: the_r = 1000;
+
+    print "the_r = ",the_r
+    return the_r;
 
 
 

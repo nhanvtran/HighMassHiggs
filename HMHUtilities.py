@@ -69,11 +69,15 @@ class singleWorkingPoint:
             if "hwwof_" in self.dcnames[i] or "hwwsf_" in self.dcnames[i]:
                 print "hard fix 1 applied: ", self.dcnames[i]                
                 self.hardFix1(self.dcnames[i]);
+            if "hwwlvjj" in self.dcnames[i]:
+                print "hard fix 1 applied: ", self.dcnames[i]                
+                self.hardFix1(self.dcnames[i]);
                 
             combineCmmd += " %s" % self.dcnames[i];
 
         combineCmmd += " > %s " % ccName;
-                        
+        print "combineCmmd = ",combineCmmd
+
         # check if workspace exists
         if os.path.isfile(self.wsName) and not overwriteFile:
             print self.wsName, "already exists!"
@@ -86,21 +90,36 @@ class singleWorkingPoint:
         # turn into a workspace
         t2wOption = '';
         if self.prodMode > 0:
-            # grab all the signal processes
-            signalnames = self.getSignalProcesses(ccName);
-            rnames = ['r_ggf','r_vbf','r_oth'];
-            rvalue = [1,0,0];
-            if self.prodMode == 2: rvalue = [0,1,0];            
-            t2wOption += " -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel --PO verbose ";
-            for i in range(len(signalnames)):
-                if len(signalnames[i]) > 0: 
-                    t2wOption += ' --PO \'map=';
-                    for j in range(len(signalnames[i])):
-                        if j == 0: t2wOption += signalnames[i][j]
-                        else: t2wOption += ","+signalnames[i][j]
-                    t2wOption += ':'+rnames[i]+'['+str(rvalue[i])+']\'';
+
+            ccNameAlt = "%s/workspaces/combine_%s_%03i_%02i_%02i%s.txt" % (self.outpath,self.label,self.mass,self.cpsq,self.brnew,self.prodTag);
+            names = [];
+            if self.prodMode == 2: names = ["ggH","GGH"];
+            if self.prodMode == 1: names = ["qqH","VBF"];
+
+            self.combineCardReparser(ccName,names,ccNameAlt);
+            ccName = ccNameAlt
+            # # grab all the signal processes
+            # signalnames = self.getSignalProcesses(ccName);
+            # rnames = ['r_ggf','r_vbf','r_oth'];
+            # rvalue = [1,0,0];
+            # if self.prodMode == 2: rvalue = [0,1,0];            
+            # t2wOption += " -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel --PO verbose ";
+            # for i in range(len(signalnames)):
+            #     if len(signalnames[i]) > 0: 
+            #         t2wOption += ' --PO \'map=';
+            #         for j in range(len(signalnames[i])):
+            #             if j == 0: t2wOption += signalnames[i][j]
+            #             else: t2wOption += ","+signalnames[i][j]
+            #         t2wOption += ':'+rnames[i]+'['+str(rvalue[i])+']\'';
+
+        # if "hzz4l" in self.channels or "hzzllll" in self.channels: 
+        #     cpsq_f = float(self.cpsq)/10.;
+        #     brnew_f = float(self.brnew)/10.;
+        #     newOption = "--setPhysicsModelParameters CMS_zz4l_csquared_BSM=%1.2f,CMS_zz4l_brnew_BSM=%1.2f --freezeNuisances CMS_zz4l_csquared_BSM,CMS_zz4l_brnew_BSM" % (cpsq_f,brnew_f);        
+        #     t2wOption += newOption;
 
         cmmd = "text2workspace.py %s -o %s %s" % (ccName,self.wsName,t2wOption);        
+        print "cmmd = ",cmmd;
 
         if isBatch:
             time.sleep(1.);
@@ -122,34 +141,39 @@ class singleWorkingPoint:
 
         # combine options
         meth = '';
-        if self.prodMode == 0:
+        if self.prodMode >= 0:
             meth = "-M Asymptotic"        
-            combineOptions = "--run expected";
+            #combineOptions = "--run expected";
+            combineOptions = "";
             #if channel == "ALL": continue; 
             if "hzz4l" in self.channels or "hzzllll" in self.channels: 
                 combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
+                cpsq_f = float(self.cpsq)/10.;
+                brnew_f = float(self.brnew)/10.;
+                combineOptions += " --setPhysicsModelParameters CMS_zz4l_csquared_BSM=%1.2f,CMS_zz4l_brnew_BSM=%1.2f --freezeNuisances CMS_zz4l_csquared_BSM,CMS_zz4l_brnew_BSM" % (cpsq_f,brnew_f);        
+
             #else: continue;
 
-        if self.prodMode == 1 or self.prodMode == 2:
-            meth = "-M MultiDimFit"        
-            # grab all the signal processes
-            ccName = "%s/workspaces/combine_%s_%03i_%02i_%02i.txt" % (self.outpath,self.label,self.mass,self.cpsq,self.brnew);
-            signalnames = self.getSignalProcesses(ccName);
-            rnames = ['r_ggf','r_vbf','r_oth'];
-            poi = '';
-            if self.prodMode == 1: poi = 'r_ggf'
-            if self.prodMode == 2: poi = 'r_vbf'
-            otherpois = [];
-            for i in range(len(signalnames)):
-                if len(signalnames[i]) > 0 and not rnames[i] == poi: otherpois.append(rnames[i]);
+        # if self.prodMode == 1 or self.prodMode == 2:
+        #     meth = "-M MultiDimFit"        
+        #     # grab all the signal processes
+        #     ccName = "%s/workspaces/combine_%s_%03i_%02i_%02i.txt" % (self.outpath,self.label,self.mass,self.cpsq,self.brnew);
+        #     signalnames = self.getSignalProcesses(ccName);
+        #     rnames = ['r_ggf','r_vbf','r_oth'];
+        #     poi = '';
+        #     if self.prodMode == 1: poi = 'r_ggf'
+        #     if self.prodMode == 2: poi = 'r_vbf'
+        #     otherpois = [];
+        #     for i in range(len(signalnames)):
+        #         if len(signalnames[i]) > 0 and not rnames[i] == poi: otherpois.append(rnames[i]);
 
-            combineOptions = "-t -1 --expectSignal=1";
+        #     combineOptions = "-t -1 --expectSignal=1";
 
-            combineOptions += " -P %s --floatOtherPOIs=0 --algo=grid --points=100 --setPhysicsModelParameterRange %s=%02i,%02i" % (poi,poi,0,15);
-            combineOptions += " --setPhysicsModelParameters "
-            for i in range(len(otherpois)):
-                if i == 0: combineOptions += "%s=0" % (otherpois[i]);
-                else: combineOptions += ",%s=0" % (otherpois[i]);
+        #     combineOptions += " -P %s --floatOtherPOIs=0 --algo=grid --points=100 --setPhysicsModelParameterRange %s=%02i,%02i" % (poi,poi,0,15);
+        #     combineOptions += " --setPhysicsModelParameters "
+        #     for i in range(len(otherpois)):
+        #         if i == 0: combineOptions += "%s=0" % (otherpois[i]);
+        #         else: combineOptions += ",%s=0" % (otherpois[i]);
         
         cmmd = "combine %s %s -n %s -m %03i %s" % (self.wsName,meth,self.biglabel,self.mass,combineOptions);
         print cmmd
@@ -195,7 +219,7 @@ class singleWorkingPoint:
         outScript.write("\n"+'ls');    
         #outScript.write("\n"+command1);
         outScript.write("\n"+command2);
-        outScript.write("\n"+'cp ws_*.root '+workdir);
+        outScript.write("\n"+'mv ws_*.root '+workdir);
         outScript.close();
         
         # link a condor script to your shell script
@@ -238,7 +262,7 @@ class singleWorkingPoint:
         outScript.write("\n"+'cd -');
         outScript.write("\n"+'ls');    
         outScript.write("\n"+command);
-        outScript.write("\n"+'cp higgsCombine*'+self.label+'*.root '+self.outpath+'/outputs');
+        outScript.write("\n"+'mv higgsCombine*'+self.label+'*.root '+self.outpath+'/outputs');
         outScript.close();
         
         # link a condor script to your shell script
@@ -374,9 +398,9 @@ class singleWorkingPoint:
 
 
     def hardFix1(self,dcname):
-        #c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
-        #os.system(c1);
-        os.system('sed s/interf_ggH/#interf_ww_ggH/ < '+dcname+' > new2.txt');
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/interf_ggH/#interf_ww_ggH/ < new1.txt > new2.txt');
         os.system('mv new2.txt '+dcname);
         #os.system('rm new1.txt');
 
@@ -393,4 +417,80 @@ class singleWorkingPoint:
         os.system('sed s/CMS_res_j/#CMS_res_ww_j/ < new1.txt > new2.txt');
         os.system('mv new2.txt '+dcname);
         os.system('rm new1.txt');   
+
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+
+    def combineCardReparser(self, card, signals, ocard):
+        print "card name = ",card
+        file = open(card,'r');
+        lists = [];
+        listOfSignalsToRemove = [];
+
+        sectionCtr = 1; 
+        withinSectionCtr = 0;
+        for line in file:
+            splitline = line.strip()
+            if "-----" in splitline: sectionCtr += 1;
+            lists.append( splitline );
+            if sectionCtr == 4:
+                if withinSectionCtr > 0:
+                    cursplitline  =  splitline.split();
+                    if withinSectionCtr == 2: 
+                        for j in range(len(cursplitline)):
+                            #print cursplitline[j]
+                            for k in range(len(signals)):
+                                if signals[k] in cursplitline[j]: listOfSignalsToRemove.append(j);
+                withinSectionCtr += 1;
+
+        print "Number of signals to remove = ", len(listOfSignalsToRemove)
+
+        sectionCtr = 1; 
+        withinSectionCtr = 0;
+        fout = open(ocard,'w');
+        for i in range(len(lists)):
+            splitline = lists[i]
+            if "-----" in splitline: sectionCtr += 1;
+
+            if sectionCtr >= 4 and not "-----" in splitline:
+                newline = "";
+                splitsplitline = splitline.split();
+                #print len(splitsplitline);
+                if sectionCtr == 4:
+                    for j in range(len(splitsplitline)):
+                        if not j in listOfSignalsToRemove: newline += splitsplitline[j] + " ";
+                elif sectionCtr == 5 and ("lnN" in splitline or "lnU" in splitline or "shapeN2" in splitline):
+                    for j in range(len(splitsplitline)):
+                        if not (j-1) in listOfSignalsToRemove: newline += splitsplitline[j] + " ";                        
+                elif sectionCtr == 5 and "gmN" in splitline:
+                    for j in range(len(splitsplitline)):
+                        if not (j-2) in listOfSignalsToRemove: newline += splitsplitline[j] + " ";                        
+                elif sectionCtr == 5 and "gmN" in splitline:
+                    for j in range(len(splitsplitline)):
+                        if not (j-3) in listOfSignalsToRemove: newline += splitsplitline[j] + " ";                                                
+                else: newline += splitline;
+                newline += "\n";
+                fout.write(newline);
+            # elif "imax" in splitline:
+            #     fout.write("imax * \n");
+            elif "jmax" in splitline:
+                fout.write("jmax * \n");
+            elif "kmax" in splitline:
+                fout.write("kmax * \n");
+            else:
+                fout.write(splitline + "\n");
+
+        fout.close();
+        #print "lists length = ", len(lists);
+        # for i in range(len(filelist)):
+        #     print filelist[i];
+
+
 

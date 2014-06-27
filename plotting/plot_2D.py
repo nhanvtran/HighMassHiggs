@@ -86,7 +86,7 @@ def getAsymLimits(outpath,label,mass, cpsq, brnew):
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052814/outputs";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_060814/outputs";
     labels = "combined";
     
     mass  = options.mass;
@@ -139,6 +139,7 @@ if __name__ == '__main__':
     hrl.GetYaxis().SetTitle("BR_{new}");
     hrl.GetXaxis().SetTitle("C\'^{2}");  
     limGridGr.Draw("colz same");
+    #limGrid.Draw("colz same");
     for i in range(len(contours)): 
         contours[i].SetLineWidth(2);
         contours[i].Draw("L");
@@ -155,8 +156,8 @@ if __name__ == '__main__':
     banner4.Draw();   
     leg.Draw();         
     ROOT.gPad.RedrawAxis();
-    can.SaveAs("combined_brnewVcpsq_"+str(options.mass)+".eps");
-    can.SaveAs("combined_brnewVcpsq_"+str(options.mass)+".pdf");
+    can.SaveAs("plots/combined_brnewVcpsq_"+str(options.mass)+".eps");
+    can.SaveAs("plots/combined_brnewVcpsq_"+str(options.mass)+".pdf");
      
 
 

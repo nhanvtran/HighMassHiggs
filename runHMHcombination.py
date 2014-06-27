@@ -41,6 +41,8 @@ def makeWorkingDirs( svnpath, workdir, channels, mass, cpsq, brnew ):
 
     massdir = "%03i" % mass;
     bsmdir  = "cpsq%02i_brnew%02i" % (cpsq, brnew);
+    bsmdirhzz = "cpsq10_brnew00";
+    bsmdirhzz2 = "cpsq01_brnew00";
 
     curworkpath = workdir+"/"+"work_"+massdir+"_"+bsmdir;
     
@@ -51,12 +53,19 @@ def makeWorkingDirs( svnpath, workdir, channels, mass, cpsq, brnew ):
 
     for i in range(len(channels)):
         localpath = channels[i] + "/" + massdir + "/" + bsmdir + "/";
+        if "hzzllll" == channels[i] or "hzz4l" == channels[i]: localpath = channels[i] + "/" + massdir + "/" + bsmdirhzz + "/";
         svnDir = svnpath + "/" + localpath;
         print svnDir
         cpCmmd = "cp %s/*.* %s/." % (svnDir,curworkpath);
         os.system(cpCmmd);
-        time.sleep(0.5);
-    
+        time.sleep(0.3);
+
+        if "hzzllll" == channels[i] or "hzz4l" == channels[i]: 
+            localpath2 = svnpath + "/" + channels[i] + "/" + massdir + "/" + bsmdirhzz2 + "/";
+            cpCmmd2 = "cp %s/*.txt %s/." % (localpath2,curworkpath);
+            os.system(cpCmmd2);
+            time.sleep(0.3);   
+
     rmCmmd = "rm %s/out*" % (curworkpath);
     os.system(rmCmmd);
     time.sleep(0.5);
@@ -68,18 +77,21 @@ if __name__ == '__main__':
 
     ### ++++++++++++++++++++INPUTS+++++++++++++++++++ ###
     
-    svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
+    #svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
+    svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/cardlinks"
     #workdir = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052614/tmpwork"
-    workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_052814/tmpwork"
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052814"
+    workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_062414/tmpwork"
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_062414"
 
-    channels = ["hww2l2v","hwwlvqq","hzz2l2v","hzzllll","hzz2l2t","hzz2l2q"];
-    #channels = ["hzzllll"];#,"hzz2l2q","hzz2l2t","hzz4l"];    
-    #cpsq  = [01,02,03,05,07,10];
+    channels = ["hww2l2v","hwwlvqq","hzz2l2v","hzz2l2t","hzz2l2q","hzz4l"];
+    #channels = ["hww2l2v","hwwlvqq","hzz2l2v","hzz2l2t","hzz2l2q"];
+    #cpsq  = [01,02,03,05,07];
     cpsq  = [01,02,03,05,07,10];    
     brnew = [00,01,02,03,04,05];
+    #brnew = [01,02,03,04,05];
     mass  = [200,250,300,350,400,500,600,700,800,900,1000];
-    #mass  = [200,230,250,270,300,350,400,440,500,540,600,700,800,900,1000];
+    #mass  = [250,300,350,400,500,600,700,800,900,1000];
+    #mass  = [145,150,160,170,180,190];#,200,250,300,350,400,500,600,700,800,900,1000];
 
     if options.cpsq  > 0: cpsq  = [options.cpsq];
     if options.brnew >= 0: brnew = [options.brnew];
@@ -100,14 +112,15 @@ if __name__ == '__main__':
                 #channelsToRun.append( ["hww2l2v"] );
                 #channelsToRun.append( ["hwwlvqq"] );
                 #channelsToRun.append( ["hzz2l2v"] );
-                #channelsToRun.append( ["hzzllll"] ); 
+                #channelsToRun.append( ["hzz4l"] ); 
                 #channelsToRun.append( ["hzz2l2t"] ); 
                 #channelsToRun.append( ["hzz2l2q"] ); 
-                channelsToRun.append( ["hww2l2v","hwwlvqq","hzz2l2v","hzz2l2t","hzz2l2q","hzzllll"] );  
-                #labels = ["hww2l2v","hwwlvqq","hzz2l2v","hzzllll","hzz2l2t","hzz2l2q","combined"]
-                #labels = ["hzz2l2q","combined"]
+                channelsToRun.append( ["hww2l2v","hwwlvqq","hzz2l2v","hzz2l2q","hzz2l2t","hzz4l"] );  
+                #labels = ["hww2l2v","hwwlvqq","hzz2l2v","hzz4l","hzz2l2t","hzz2l2q","combined"]
+                #labels = ["hww2l2v","hwwlvqq","hzz2l2v","hzz4l","hzz2l2t","hzz2l2q"]
+                #labels = ["hzz2l2t"]
                 labels = ["combined"]
-                #labels = ["hwwlvqq"];
+                #labels = ["hww2l2v","hzzllll","combined"]
 
                 if options.makeWorkingDirs:
                     makeWorkingDirs( svnpath, workdir, channels, mass[i], cpsq[j], brnew[k] );

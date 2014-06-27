@@ -36,10 +36,10 @@ def GetContours( th2 ):
 ## ===========================================================================================
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052814/outputs";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_062414/outputs";
     labels = "combined";
     #labels = "hzz2l2v";
-    mass  = [200,300,400,500,600,700,800,900,1000];
+    mass  = [200,250,300,350,400,500,600,700,800,900,1000];
     cpsq  = [01,02,03,05,07,10];
 
     cpsqbin  = [0.05,0.15,0.25,0.4,0.6,0.85,1.15];  
@@ -114,7 +114,8 @@ if __name__ == '__main__':
     ROOT.gPad.SetLogz();
     ROOT.gPad.RedrawAxis();    
     can.Update();
-    can.SaveAs("test_BRnew00Contour.eps");  
+    can.SaveAs("plots/combined_BRnew00Contour.eps");  
+    can.SaveAs("plots/combined_BRnew00Contour.pdf");  
 
 
 
