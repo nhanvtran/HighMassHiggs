@@ -16,16 +16,31 @@ ROOT.gStyle.SetPadRightMargin(0.10);
 ROOT.gStyle.SetPadTopMargin(0.10);
 ROOT.gStyle.SetPalette(1);
 
+############################################
+#            Job steering                  #
+############################################
+from optparse import OptionParser
+
+parser = OptionParser()
+
+parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
+parser.add_option('--tag',action="store",type="string",dest="tag",default="combined")
+#parser.add_option('--tag',action="store",type="string",dest="tag",default="qg")
+
+(options, args) = parser.parse_args()
+
+
 ## ===========================================================================================
 ## ===========================================================================================
 ## ===========================================================================================
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_062414/outputs";
-    labels = ["combined"];
-    #labels = ["hzz2l2q"];
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_080614/outputs";
+    #labels = ["combined"];
+    labels = [options.tag];
     mass  = [200,250,300,350,400,500,600,700,800,900,1000];
+    #cpsq  = [01,02,03,05,07,10];
     cpsq  = [01,02,03,05,07,10];
 
     arrays_masses = [];
@@ -78,8 +93,10 @@ if __name__ == '__main__':
     leg.SetBorderSize(1);  
     for a in range(len(cpsq)):
         graphs[a].SetLineColor( colors[a] );        
+        graphs[a].SetMarkerColor( colors[a] );   
+        graphs[a].SetMarkerStyle( 24 );   
         graphs[a].SetLineWidth( widths[a] );                    
-        leg.AddEntry(graphs[a],"C\'^{2} = "+str(cpsq[a]/10.),"l");
+        leg.AddEntry(graphs[a],"C\'^{2} = "+str(cpsq[a]/10.),"pl");
                                 
     banner = ROOT.TLatex(0.18,0.92,("CMS Preliminary, 7+8 TeV "));
     banner.SetNDC()
@@ -112,8 +129,8 @@ if __name__ == '__main__':
     banner.Draw();
     banner2.Draw();    
     ROOT.gPad.SetLogy();
-    can.SaveAs("plots/test_BRnew00.eps");       
-    can.SaveAs("plots/test_BRnew00.pdf");       
+    can.SaveAs("plots/test_BRnew00-"+options.tag+"_080614.eps");       
+    can.SaveAs("plots/test_BRnew00-"+options.tag+"_080614.pdf");       
 
 
 

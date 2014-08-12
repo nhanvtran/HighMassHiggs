@@ -25,10 +25,12 @@ parser.add_option('--mkWkspace',action="store_true",dest="mkWkspace",default=Fal
 parser.add_option('--isBatch',action="store_true",dest="isBatch",default=False,help='do training')
 parser.add_option('--vbfOnly',action="store_true",dest="vbfOnly",default=False,help='do training')
 parser.add_option('--ggfOnly',action="store_true",dest="ggfOnly",default=False,help='do training')
+parser.add_option('--highMemory',action="store_true",dest="highMemory",default=False,help='do training')
 
 parser.add_option('--mass',action="store",type="int",dest="mass",default=-1)
 parser.add_option('--cpsq',action="store",type="int",dest="cpsq",default=-1)
 parser.add_option('--brnew',action="store",type="int",dest="brnew",default=-1)
+parser.add_option('--mlfit',action="store_true",dest="mlfit",default=False,help='do training')
 
 (options, args) = parser.parse_args()
 
@@ -69,9 +71,9 @@ def makeWorkingDirs( svnpath, workdir, channels, mass, cpsq, brnew ):
     rmCmmd = "rm %s/out*" % (curworkpath);
     os.system(rmCmmd);
     time.sleep(0.5);
-    rmCmmd = "rm %s/condor*" % (curworkpath);
-    os.system(rmCmmd);    
-    time.sleep(0.5);
+    #rmCmmd = "rm %s/condor*" % (curworkpath);
+    #os.system(rmCmmd);    
+    #time.sleep(0.5);
 
 if __name__ == '__main__':
 
@@ -79,9 +81,11 @@ if __name__ == '__main__':
     
     #svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
     svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/cardlinks"
-    #workdir = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_052614/tmpwork"
-    workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_062414/tmpwork"
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_062414"
+    
+    workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_080614/tmpwork"
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_080614"
+    #workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_071614/tmpwork"
+    #outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_071614"
 
     channels = ["hww2l2v","hwwlvqq","hzz2l2v","hzz2l2t","hzz2l2q","hzz4l"];
     #channels = ["hww2l2v","hwwlvqq","hzz2l2v","hzz2l2t","hzz2l2q"];
@@ -89,7 +93,9 @@ if __name__ == '__main__':
     cpsq  = [01,02,03,05,07,10];    
     brnew = [00,01,02,03,04,05];
     #brnew = [01,02,03,04,05];
-    mass  = [200,250,300,350,400,500,600,700,800,900,1000];
+    #mass  = [200,250,300,350,400,500,600,700,800,900,1000];
+    #mass  = [400,500];
+    mass  = [600,700,800];
     #mass  = [250,300,350,400,500,600,700,800,900,1000];
     #mass  = [145,150,160,170,180,190];#,200,250,300,350,400,500,600,700,800,900,1000];
 
@@ -115,21 +121,26 @@ if __name__ == '__main__':
                 #channelsToRun.append( ["hzz4l"] ); 
                 #channelsToRun.append( ["hzz2l2t"] ); 
                 #channelsToRun.append( ["hzz2l2q"] ); 
-                channelsToRun.append( ["hww2l2v","hwwlvqq","hzz2l2v","hzz2l2q","hzz2l2t","hzz4l"] );  
-                #labels = ["hww2l2v","hwwlvqq","hzz2l2v","hzz4l","hzz2l2t","hzz2l2q","combined"]
-                #labels = ["hww2l2v","hwwlvqq","hzz2l2v","hzz4l","hzz2l2t","hzz2l2q"]
-                #labels = ["hzz2l2t"]
-                labels = ["combined"]
-                #labels = ["hww2l2v","hzzllll","combined"]
+                ###channelsToRun.append( ["hww2l2v","hzz2l2v","hzz2l2q","hwwlvqq","hzz4l"] );                     
+                channelsToRun.append( ["hww2l2v","hwwlvqq","hzz4l"] );  
+                #channelsToRun.append( ["hww2l2v","hzz4l"] );  
+
+    
+                labels = ["comb_ww2l2v_wwlvqq_zz4l_NoNonCmsSys"]
+                #labels = ["hzz4l","hww2l2v","hwwlvqq"]
+                #labels = ["hww2l2v"]
 
                 if options.makeWorkingDirs:
                     makeWorkingDirs( svnpath, workdir, channels, mass[i], cpsq[j], brnew[k] );
 
                 for aa in range(len(channelsToRun)):
-                    testWP = singleWorkingPoint( labels[aa], workdir, outpath, channelsToRun[aa], mass[i], cpsq[j], brnew[k], productionMode)
+                    testWP = singleWorkingPoint( labels[aa], workdir, outpath, channelsToRun[aa], mass[i], cpsq[j], brnew[k], productionMode, options.highMemory)
                     if options.mkWkspace: 
                         testWP.createWorkspace(options.isBatch,False);
-                    if options.runLimits: testWP.runAsymLimit(options.isBatch);
+                    if options.runLimits: 
+                        method = "Asymptotic";
+                        if options.mlfit: method = "MaxLikelihoodFit";
+                        testWP.runAsymLimit(options.isBatch,method);
                     ctr += 1;
 
     print "ctr = ",ctr

@@ -9,7 +9,7 @@ import ROOT
 
 class singleWorkingPoint:
 
-    def __init__(self, label, workpath, outpath, channels, mass, cpsq, brnew, productionMode=0):
+    def __init__(self, label, workpath, outpath, channels, mass, cpsq, brnew, productionMode=0, highmemory = False):
 
     	self.label    = label;
         self.workpath = workpath;
@@ -20,6 +20,8 @@ class singleWorkingPoint:
         self.mass     = mass;
         self.cpsq     = cpsq;
         self.brnew    = brnew;
+
+        self.highmemory = highmemory;
 
         # if production mode == 0, this is the default
         # if production mode == 1, this is ggH only
@@ -60,18 +62,20 @@ class singleWorkingPoint:
             #if 'interf_ggH' in open(self.dcnames[i]).read(): self.hardFix1(self.dcnames[i]);
             #if 'DataCard_2l2tau' in self.dcnames[i]: self.hardFix2(self.dcnames[i]);  
             # !!!hard fixes!!!
-            name1 = "%s_ggH%03i_el_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);
-            name2 = "%s_ggH%03i_mu_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);                
-            name3 = "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);   
-            if self.dcnames[i] == name1 or self.dcnames[i] == name2 or self.dcnames[i] == name3:
-                print "hard fix 3 applied: ", self.dcnames[i]
-                self.hardFix3(self.dcnames[i]);
-            if "hwwof_" in self.dcnames[i] or "hwwsf_" in self.dcnames[i]:
-                print "hard fix 1 applied: ", self.dcnames[i]                
-                self.hardFix1(self.dcnames[i]);
-            if "hwwlvjj" in self.dcnames[i]:
-                print "hard fix 1 applied: ", self.dcnames[i]                
-                self.hardFix1(self.dcnames[i]);
+            # name1 = "%s_ggH%03i_el_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);
+            # name2 = "%s_ggH%03i_mu_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);                
+            # name3 = "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew);   
+            # if self.dcnames[i] == name1 or self.dcnames[i] == name2 or self.dcnames[i] == name3:
+            #     print "hard fix 3 applied: ", self.dcnames[i]
+            
+            ### remove all interf nusiances...
+            #self.hardFix1D(self.dcnames[i]);
+            # if "hwwof_" in self.dcnames[i] or "hwwsf_" in self.dcnames[i]:
+            #     print "hard fix 1 applied: ", self.dcnames[i]                
+            #     self.hardFix1(self.dcnames[i]);
+            # if "hwwlvjj" in self.dcnames[i]:
+            #     print "hard fix 1 applied: ", self.dcnames[i]                
+            #     #self.hardFix1(self.dcnames[i]);
                 
             combineCmmd += " %s" % self.dcnames[i];
 
@@ -86,6 +90,12 @@ class singleWorkingPoint:
         # make combined card
         time.sleep(0.5);
         os.system(combineCmmd);
+
+        ## hard fixes
+        #self.hardFixE1(ccName);
+        self.hardFixE2(ccName);
+        #self.hardFixF1A(ccName,[2]);
+        # self.hardFix_paramRange(ccName);
 
         # turn into a workspace
         t2wOption = '';
@@ -134,7 +144,7 @@ class singleWorkingPoint:
 
     ##########################################################################################################
 
-    def runAsymLimit(self, isBatch):
+    def runAsymLimit(self, isBatch, method = "Asymptotic"):
         
         os.chdir( self.curworkpath );
         #os.chdir( self.outpath + "/outputs" );
@@ -142,15 +152,19 @@ class singleWorkingPoint:
         # combine options
         meth = '';
         if self.prodMode >= 0:
-            meth = "-M Asymptotic"        
+            ###meth = " -M Asymptotic"        
+            meth = " -M "+method;
             #combineOptions = "--run expected";
             combineOptions = "";
             #if channel == "ALL": continue; 
             if "hzz4l" in self.channels or "hzzllll" in self.channels: 
-                combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
+                if method == "Asymptotic": combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
+                if method == "MaxLikelihoodFit": combineOptions += " --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
                 cpsq_f = float(self.cpsq)/10.;
                 brnew_f = float(self.brnew)/10.;
-                combineOptions += " --setPhysicsModelParameters CMS_zz4l_csquared_BSM=%1.2f,CMS_zz4l_brnew_BSM=%1.2f --freezeNuisances CMS_zz4l_csquared_BSM,CMS_zz4l_brnew_BSM" % (cpsq_f,brnew_f);        
+                combineOptions += " --setPhysicsModelParameters CMS_zz4l_csquared_BSM=%1.2f,CMS_zz4l_brnew_BSM=%1.2f " % (cpsq_f,brnew_f);        
+                #combineOptions += "--freezeNuisances CMS_zz4l_csquared_BSM,CMS_zz4l_brnew_BSM"
+                combineOptions += " --freezeNuisances CMS_zz4l_csquared_BSM,CMS_zz4l_brnew_BSM"
 
             #else: continue;
 
@@ -175,24 +189,28 @@ class singleWorkingPoint:
         #         if i == 0: combineOptions += "%s=0" % (otherpois[i]);
         #         else: combineOptions += ",%s=0" % (otherpois[i]);
         
+        #cmmd = "combine %s %s -n %s -m %03i %s -S 0" % (self.wsName,meth,self.biglabel,self.mass,combineOptions);
         cmmd = "combine %s %s -n %s -m %03i %s" % (self.wsName,meth,self.biglabel,self.mass,combineOptions);
         print cmmd
         
         if not os.path.isfile(self.wsName):
             print "[runAsymLimit], ", self.wsName, "does not exist!"
+            return;
         if os.path.isfile(self.oName):
             print "[runAsymLimit], ", self.oName, "already exists!"
-            return;
+            if method == "Asymptotic": return;
 
-        else:
-            if isBatch: 
-                time.sleep(1.);            
-                self.submitBatchJobCombine(cmmd);
-            else: 
-                os.system(cmmd);
-                time.sleep(1.);                            
-                mvcmmd = "mv higgsCombine%s.Asymptotic.mH%03i.root %s/outputs/." % (self.biglabel,self.mass,self.outpath);
-                os.system(mvcmmd)
+        # else:
+        if isBatch: 
+            time.sleep(1.);            
+            self.submitBatchJobCombine(cmmd);
+        else: 
+            os.system(cmmd);
+            time.sleep(1.);                            
+            mvcmmd = "mv higgsCombine%s.*.mH%03i.root %s/outputs/." % (self.biglabel,self.mass,self.outpath);
+            os.system(mvcmmd)
+            mvcmmd = "mv mlfit*%s*.root %s/outputs/." % (self.biglabel,self.outpath);
+            os.system(mvcmmd)
 
         os.chdir(self.cwd); 
 
@@ -226,7 +244,12 @@ class singleWorkingPoint:
         condorScript=open("subCondor_mkws_"+fn,"w");
         condorScript.write('universe = vanilla')
         condorScript.write("\n"+"Executable = "+fn+".sh")
-        condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
+
+        if not self.highmemory: condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
+        if self.highmemory:
+            condorScript.write("\n"+"+BigMemoryJob = True")
+            condorScript.write("\n"+'Requirements = Memory >= 199 && OpSys == "LINUX" && (Arch != "DUMMY" ) && Disk > 1000000 && (BigMemoryNode =?= True)')
+
         condorScript.write("\n"+'Should_Transfer_Files = YES')
         #condorScript.write("\n"+'Transfer_Input_Files = '+self.wsName)
         condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
@@ -263,13 +286,19 @@ class singleWorkingPoint:
         outScript.write("\n"+'ls');    
         outScript.write("\n"+command);
         outScript.write("\n"+'mv higgsCombine*'+self.label+'*.root '+self.outpath+'/outputs');
+        outScript.write("\n"+'mv mlfit*'+self.label+'*.root '+self.outpath+'/outputs');
         outScript.close();
         
         # link a condor script to your shell script
         condorScript=open("subCondor_"+fn,"w");
         condorScript.write('universe = vanilla')
         condorScript.write("\n"+"Executable = "+fn+".sh")
-        condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
+        
+        if not self.highmemory: condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
+        if self.highmemory:
+            condorScript.write("\n"+"+BigMemoryJob = True")
+            condorScript.write("\n"+'Requirements = Memory >= 199 && OpSys == "LINUX" && (Arch != "DUMMY" ) && Disk > 1000000 && (BigMemoryNode =?= True)')
+        
         condorScript.write("\n"+'Should_Transfer_Files = YES')
         #condorScript.write("\n"+'Transfer_Input_Files = '+self.wsBaseName)    
         condorScript.write("\n"+'WhenToTransferOutput  = ON_EXIT_OR_EVICT')
@@ -400,23 +429,253 @@ class singleWorkingPoint:
     def hardFix1(self,dcname):
         c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
         os.system(c1);
-        os.system('sed s/interf_ggH/#interf_ww_ggH/ < new1.txt > new2.txt');
+        os.system('sed s/int/#intfix/ < new1.txt > new2.txt');
         os.system('mv new2.txt '+dcname);
         #os.system('rm new1.txt');
 
-    def hardFix2(self,dcname):
-        c1 = 'sed s/"CMS_hzz2l2tau_ZjetBkgMMEM"/"#CMS_hzz2l2tau_ZjetBkgMMEM"/ < '+dcname+' > new1.txt'
+    def hardFix1A(self,dcname):
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
         os.system(c1);
-        #os.system('sed s/interf_ggH/#interf_ggH/ < new1.txt > new2.txt');
-        os.system('mv new1.txt '+dcname);
+        os.system('sed s/int/#intfix/ < new1.txt > new2.txt');
+        os.system('sed s/CMS_8TeV_hww_/#CMS_8TeV_hww_/ < new2.txt > new3.txt');
+        os.system('sed s/CMS_hzz2l2q_/#CMS_hzz2l2q_/ < new3.txt > new4.txt');
+        os.system('sed s/CMS_hzz2l2v_/#CMS_hzz2l2v_/ < new4.txt > new5.txt');        
+        os.system('sed s/CMS_zz4l_/#CMS_zz4l_/ < new5.txt > new6.txt');        
+        os.system('sed s/Deco_WJets0_/#Deco_WJets0_/ < new6.txt > new7.txt'); 
+        os.system('sed s/CMS_hzz2l2tau_/#CMS_hzz2l2tau_/ < new7.txt > new8.txt'); 
+        os.system('mv new8.txt '+dcname);
+        os.system('rm new1.txt new2.txt new3.txt new4.txt new5.txt new6.txt new7.txt');        
+
+    def hardFix1B(self,dcname):
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/int/#int/ < new1.txt > new2.txt');
+        os.system('sed s/CMS/#CMS/ < new2.txt > new3.txt');
+        os.system('sed s/Deco_WJets0_/#Deco_WJets0_/ < new3.txt > new4.txt');
+        os.system('mv new4.txt '+dcname);
+        os.system('rm new1.txt new2.txt new3.txt');
+
+    def hardFix1C1(self,dcname):
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/int/#intfix/ < new1.txt > new2.txt');
+        os.system('sed s/CMS_8TeV_hww_/#CMS_8TeV_hww_/ < new2.txt > new5.txt');
+        os.system('sed s/CMS_zz4l_/#CMS_zz4l_/ < new5.txt > new6.txt');        
+        os.system('sed s/Deco_WJets0_/#Deco_WJets0_/ < new6.txt > new7.txt'); 
+        os.system('mv new7.txt '+dcname);
+        os.system('rm new1.txt new2.txt new5.txt new6.txt');                      
+
+    def hardFix1D(self,dcname):
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/int/#int/ < new1.txt > new2.txt');
+        os.system('sed s/CMS_res/#CMS_res/ < new2.txt > new3.txt');
+        os.system('sed s/CMS_scale/#CMS_scale/ < new3.txt > new4.txt');
+        os.system('sed s/CMS_eff/#CMS_eff/ < new4.txt > new5.txt');        
+        os.system('mv new5.txt '+dcname);
+        os.system('rm new1.txt new2.txt new3.txt new4.txt');        
+
+    def hardFix1D1(self,dcname):
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/int/#int/ < new1.txt > new2.txt');
+        os.system('sed s/CMS_res/#CMS_res/ < new2.txt > new3.txt');
+        os.system('sed s/CMS_scale/#CMS_scale/ < new3.txt > new4.txt');
+        os.system('sed s/CMS_eff/#CMS_eff/ < new4.txt > new5.txt');        
+        os.system('sed s/CMS_trigger/#CMS_trigger/ < new5.txt > new6.txt');        
+        os.system('sed s/CMS_hzz/#CMS_hzz/ < new6.txt > new7.txt');                
+        os.system('mv new7.txt '+dcname);
+        os.system('rm new1.txt new2.txt new3.txt new4.txt new5.txt new6.txt');   
+
+    def hardFix1D2(self,dcname):
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/int/#int/ < new1.txt > new2.txt');
+        os.system('sed s/CMS_res/#CMS_res/ < new2.txt > new3.txt');
+        os.system('sed s/CMS_scale/#CMS_scale/ < new3.txt > new4.txt');
+        os.system('sed s/CMS_eff/#CMS_eff/ < new4.txt > new5.txt');        
+        os.system('sed s/CMS_trigger/#CMS_trigger/ < new5.txt > new6.txt');        
+        os.system('sed s/CMS_8TeV/#CMS_8TeV/ < new6.txt > new7.txt');                
+        os.system('mv new7.txt '+dcname);
+        os.system('rm new1.txt new2.txt new3.txt new4.txt new5.txt new6.txt');    
+
+    def hardFix1D3(self,dcname):
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/int/#int/ < new1.txt > new2.txt');
+        os.system('sed s/CMS_res/#CMS_res/ < new2.txt > new3.txt');
+        os.system('sed s/CMS_scale/#CMS_scale/ < new3.txt > new4.txt');
+        os.system('sed s/CMS_eff/#CMS_eff/ < new4.txt > new5.txt');        
+        os.system('sed s/CMS_trigger/#CMS_trigger/ < new5.txt > new6.txt');        
+        os.system('sed s/CMS_hwwlvj/#CMS_hwwlvj/ < new6.txt > new7.txt');                
+        os.system('mv new7.txt '+dcname);
+        os.system('rm new1.txt new2.txt new3.txt new4.txt new5.txt new6.txt');  
+
+    def hardFixE(self,dcname):
+        
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        f1 = open('new1.txt','r');
+
+        fout = open("tmp.txt",'w');
+
+        for line in f1:
+            curline = line.strip();
+
+            if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline): curline = "#" + curline;
+            fout.write( curline+'\n' );
+
+        fout.close();
+        os.system('mv tmp.txt '+dcname);      
+
+    def hardFixE1(self,dcname):
+
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        f1 = open('new1.txt','r');
+
+        fout = open("tmp.txt",'w');
+
+        for line in f1:
+            curline = line.strip();
+
+            if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline): 
+                if not ("CMS" in curline): curline = "#" + curline;
+
+            if ("param" in curline) and ('-1,1' in curline): 
+                updatedLine = curline.replace('[-1,1]','');
+                curline = updatedLine;
+
+            fout.write( curline+'\n' );
+
+        fout.close();
+        os.system('mv tmp.txt '+dcname); 
+
+    def hardFixE2(self,dcname):
+
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        f1 = open('new1.txt','r');
+
+        fout = open("tmp.txt",'w');
+
+        for line in f1:
+            curline = line.strip();
+
+            if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline): 
+                if ("CMS" in curline): curline = "#" + curline;
+
+            if ("param" in curline) and ('-1,1' in curline): 
+                updatedLine = curline.replace('[-1,1]','');
+                curline = updatedLine;
+
+            fout.write( curline+'\n' );
+
+        fout.close();
+        os.system('mv tmp.txt '+dcname);   
+
+
+    def hardFixE1A(self,dcname,opt=1):
+
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        f1 = open('new1.txt','r');
+
+        fout = open("tmp.txt",'w');
+
+        for line in f1:
+            curline = line.strip();
+
+            if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline): 
+                if not ("CMS" in curline): 
+                    if "QCDscale" in curline and (1 in opt): curline = "#" + curline;
+                    if "int" in curline and      (2 in opt): curline = "#" + curline;
+                    if "pdf" in curline and      (3 in opt): curline = "#" + curline;
+                    if "Wjet" in curline and     (4 in opt): curline = "#" + curline;
+                    if "Gen" in curline and      (5 in opt): curline = "#" + curline;
+                    if "UEPS" in curline and     (6 in opt): curline = "#" + curline;
+                    if "offshell" in curline and (7 in opt): curline = "#" + curline;
+                    if "BRhiggs" in curline and  (8 in opt): curline = "#" + curline;
+                    if "lumi" in curline and     (9 in opt): curline = "#" + curline;
+            if ("param" in curline) and ('-1,1' in curline): 
+                updatedLine = curline.replace('[-1,1]','');
+                curline = updatedLine;                    
+
+            fout.write( curline+'\n' );
+
+        fout.close();
+        os.system('mv tmp.txt '+dcname);             
+
+    def hardFixF1A(self,dcname,opt=1):
+
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        f1 = open('new1.txt','r');
+
+        fout = open("tmp.txt",'w');
+
+        for line in f1:
+            curline = line.strip();
+
+            if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline) or ("param" in curline): 
+                if not ("CMS" in curline): 
+                    if "QCDscale" in curline and (1 in opt): curline = "#" + curline;
+                    if "int" in curline and      (2 in opt): curline = "#" + curline;
+                    if "pdf" in curline and      (3 in opt): curline = "#" + curline;
+                    if "Wjet" in curline and     (4 in opt): curline = "#" + curline;
+                    if "Gen" in curline and      (5 in opt): curline = "#" + curline;
+                    if "UEPS" in curline and     (6 in opt): curline = "#" + curline;
+                    if "offshell" in curline and (7 in opt): curline = "#" + curline;
+                    if "BRhiggs" in curline and  (8 in opt): curline = "#" + curline;
+                    if "lumi" in curline and     (9 in opt): curline = "#" + curline;
+
+            fout.write( curline+'\n' );
+
+        fout.close();
+        os.system('mv tmp.txt '+dcname);                                      
+
+    def hardFix_paramRange(self,dcname,opt=1):
+
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        f1 = open('new1.txt','r');
+        fout = open("tmp.txt",'w');
+
+        for line in f1:
+            curline = line.strip();
+            if ("param" in curline) and ('-1,1' in curline): 
+                updatedLine = curline.replace('[-1,1]','');
+                curline = updatedLine;
+
+            fout.write( curline+'\n' );
+
+        fout.close();
+        os.system('mv tmp.txt '+dcname);  
+
+    def hardFix2(self,dcname):
+        #c1 = 'sed s/"CMS_hzz2l2tau_ZjetBkgMMEM"/"#CMS_hzz2l2tau_ZjetBkgMMEM"/ < '+dcname+' > new1.txt'
+        #os.system(c1);
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        os.system('sed s/interf_ggH/#interf_fix_ggH/ < new1.txt > new2.txt');
+        os.system('mv new2.txt '+dcname);
         os.system('rm new1.txt');        
     
     def hardFix3(self,dcname):
-        c1 = 'sed s/CMS_scale_j/#CMS_scale_ww_j/ < '+dcname+' > new1.txt'
+        # c1 = 'sed s/"CMS_scale_j lnN"/"#CMS_scale_ww_j lnN"/ < '+dcname+' > new1.txt'
+        # os.system(c1);
+        # os.system('sed s/"CMS_res_j lnN"/"#CMS_res_j lnN"/ < new1.txt > new2.txt');
+        # os.system('sed s/"intf_ggH            lnN"/"#intf_ggH lnN"/ < new2.txt > new3.txt');
+        # os.system('mv new3.txt '+dcname);
+        # os.system('rm new1.txt');   
+        # os.system('rm new2.txt');   
+        c1 = 'sed s/"CMS_scale_j"/"#CMS_scale_ww_j lnN"/ < '+dcname+' > new1.txt'
         os.system(c1);
-        os.system('sed s/CMS_res_j/#CMS_res_ww_j/ < new1.txt > new2.txt');
-        os.system('mv new2.txt '+dcname);
+        os.system('sed s/"CMS_res_j lnN"/"#CMS_res_j lnN"/ < new1.txt > new2.txt');
+        os.system('sed s/"intf_ggH            lnN"/"#intf_ggH lnN"/ < new2.txt > new3.txt');
+        os.system('mv new3.txt '+dcname);
         os.system('rm new1.txt');   
+        os.system('rm new2.txt');   
 
     ##########################################################################################################
     ##########################################################################################################
