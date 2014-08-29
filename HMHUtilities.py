@@ -92,9 +92,11 @@ class singleWorkingPoint:
         os.system(combineCmmd);
 
         ## hard fixes
+        #self.hardFixE(ccName);
         #self.hardFixE1(ccName);
-        self.hardFixE2(ccName);
-        #self.hardFixF1A(ccName,[2]);
+        #self.hardFixE2(ccName);
+        #self.hardFixE1A(ccName,[1,3,9]);
+        self.hardFixE2A(ccName,[1,2,3,4,5,6,7,8,9]);
         # self.hardFix_paramRange(ccName);
 
         # turn into a workspace
@@ -154,8 +156,8 @@ class singleWorkingPoint:
         if self.prodMode >= 0:
             ###meth = " -M Asymptotic"        
             meth = " -M "+method;
-            #combineOptions = "--run expected";
-            combineOptions = "";
+            combineOptions = "--run expected";
+            #combineOptions = "";
             #if channel == "ALL": continue; 
             if "hzz4l" in self.channels or "hzzllll" in self.channels: 
                 if method == "Asymptotic": combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
@@ -522,7 +524,7 @@ class singleWorkingPoint:
         for line in f1:
             curline = line.strip();
 
-            if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline): curline = "#" + curline;
+            if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline) or ("lnU" in curline): curline = "#" + curline;
             fout.write( curline+'\n' );
 
         fout.close();
@@ -542,9 +544,9 @@ class singleWorkingPoint:
             if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline): 
                 if not ("CMS" in curline): curline = "#" + curline;
 
-            if ("param" in curline) and ('-1,1' in curline): 
-                updatedLine = curline.replace('[-1,1]','');
-                curline = updatedLine;
+            # if ("param" in curline) and ('-1,1' in curline): 
+            #     updatedLine = curline.replace('[-1,1]','');
+            #     curline = updatedLine;
 
             fout.write( curline+'\n' );
 
@@ -565,17 +567,13 @@ class singleWorkingPoint:
             if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline): 
                 if ("CMS" in curline): curline = "#" + curline;
 
-            if ("param" in curline) and ('-1,1' in curline): 
-                updatedLine = curline.replace('[-1,1]','');
-                curline = updatedLine;
-
             fout.write( curline+'\n' );
 
         fout.close();
         os.system('mv tmp.txt '+dcname);   
 
 
-    def hardFixE1A(self,dcname,opt=1):
+    def hardFixE1A(self,dcname,opt=[1]):
 
         c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
         os.system(c1);
@@ -596,10 +594,38 @@ class singleWorkingPoint:
                     if "UEPS" in curline and     (6 in opt): curline = "#" + curline;
                     if "offshell" in curline and (7 in opt): curline = "#" + curline;
                     if "BRhiggs" in curline and  (8 in opt): curline = "#" + curline;
-                    if "lumi" in curline and     (9 in opt): curline = "#" + curline;
-            if ("param" in curline) and ('-1,1' in curline): 
-                updatedLine = curline.replace('[-1,1]','');
-                curline = updatedLine;                    
+                    if "lumi" in curline and     (9 in opt): curline = "#" + curline;                
+
+            fout.write( curline+'\n' );
+
+        fout.close();
+        os.system('mv tmp.txt '+dcname);          
+
+    def hardFixE2A(self,dcname,opt=[1]):
+
+        c1 = 'sed s/"kmax .."/"kmax \* "/ < '+dcname+' > new1.txt'
+        os.system(c1);
+        f1 = open('new1.txt','r');
+
+        fout = open("tmp.txt",'w');
+
+        for line in f1:
+            curline = line.strip();
+
+            if ("lnN" in curline) or ("gmN" in curline) or ("shapeN" in curline): 
+                if not ("CMS" in curline): 
+                    if "QCDscale" in curline and (1 in opt): curline = "#" + curline;
+                    if "int" in curline and      (2 in opt): curline = "#" + curline;
+                    if "pdf" in curline and      (3 in opt): curline = "#" + curline;
+                    if "Wjet" in curline and     (4 in opt): curline = "#" + curline;
+                    if "Gen" in curline and      (5 in opt): curline = "#" + curline;
+                    if "UEPS" in curline and     (6 in opt): curline = "#" + curline;
+                    if "offshell" in curline and (7 in opt): curline = "#" + curline;
+                    if "BRhiggs" in curline and  (8 in opt): curline = "#" + curline;
+                    if "lumi_7" in curline and     (9 in opt): curline = "#" + curline;                
+                    if "lumi_8" in curline and     (10 in opt): curline = "#" + curline;                
+                else: 
+                    curline = "#" + curline;
 
             fout.write( curline+'\n' );
 

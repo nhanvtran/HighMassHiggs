@@ -82,8 +82,8 @@ if __name__ == '__main__':
     #svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
     svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/cardlinks"
     
-    workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_080614/tmpwork"
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_080614"
+    workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_082914/tmpwork"
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_082914"
     #workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_071614/tmpwork"
     #outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_071614"
 
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     #brnew = [01,02,03,04,05];
     #mass  = [200,250,300,350,400,500,600,700,800,900,1000];
     #mass  = [400,500];
-    mass  = [600,700,800];
+    mass  = [600,700];
     #mass  = [250,300,350,400,500,600,700,800,900,1000];
     #mass  = [145,150,160,170,180,190];#,200,250,300,350,400,500,600,700,800,900,1000];
 
@@ -126,8 +126,9 @@ if __name__ == '__main__':
                 #channelsToRun.append( ["hww2l2v","hzz4l"] );  
 
     
-                labels = ["comb_ww2l2v_wwlvqq_zz4l_NoNonCmsSys"]
+                labels = ["comb_ww2l2v_wwlvqq_zz4l_TestE2A_p139"]
                 #labels = ["hzz4l","hww2l2v","hwwlvqq"]
+                #labels = ["hww2l2v","hwwlvqq","hzz4l","comb_ww2l2v_wwlvqq_zz4l"]
                 #labels = ["hww2l2v"]
 
                 if options.makeWorkingDirs:

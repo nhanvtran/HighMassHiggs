@@ -36,7 +36,7 @@ parser.add_option('--tag',action="store",type="string",dest="tag",default="combi
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_080614/outputs";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_081214/outputs";
     #labels = ["combined"];
     labels = [options.tag];
     mass  = [200,250,300,350,400,500,600,700,800,900,1000];
@@ -129,8 +129,8 @@ if __name__ == '__main__':
     banner.Draw();
     banner2.Draw();    
     ROOT.gPad.SetLogy();
-    can.SaveAs("plots/test_BRnew00-"+options.tag+"_080614.eps");       
-    can.SaveAs("plots/test_BRnew00-"+options.tag+"_080614.pdf");       
+    can.SaveAs("plots/test_BRnew00-"+options.tag+"_081214.eps");       
+    can.SaveAs("plots/test_BRnew00-"+options.tag+"_081214.pdf");       
 
 
 
