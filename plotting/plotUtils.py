@@ -45,6 +45,7 @@ def getAsymLimits(outpath,label,mass, cpsq, brnew,postfix=""):
         elif t_quantileExpected >= 0.974 and t_quantileExpected <= 0.976: lims[5] = t_limit;
         else: print "Unknown quantile!"
 
+    print "lims = ", lims
     return lims;
 
 

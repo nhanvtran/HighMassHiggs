@@ -95,8 +95,8 @@ class singleWorkingPoint:
         #self.hardFixE(ccName);
         #self.hardFixE1(ccName);
         #self.hardFixE2(ccName);
-        #self.hardFixE1A(ccName,[1,3,9]);
-        self.hardFixE2A(ccName,[1,2,3,4,5,6,7,8,9]);
+        ######################self.hardFixE1A(ccName,[1,3]);
+        #self.hardFixE2A(ccName,[1,2,3,4,5,6,7,8,9]);
         # self.hardFix_paramRange(ccName);
 
         # turn into a workspace
@@ -156,8 +156,9 @@ class singleWorkingPoint:
         if self.prodMode >= 0:
             ###meth = " -M Asymptotic"        
             meth = " -M "+method;
-            combineOptions = "--run expected";
-            #combineOptions = "";
+            #combineOptions = "--run blind";
+            #combineOptions = "--run expected";
+            combineOptions = " -v 99 ";
             #if channel == "ALL": continue; 
             if "hzz4l" in self.channels or "hzzllll" in self.channels: 
                 if method == "Asymptotic": combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
@@ -192,9 +193,13 @@ class singleWorkingPoint:
         #         else: combineOptions += ",%s=0" % (otherpois[i]);
         
         #cmmd = "combine %s %s -n %s -m %03i %s -S 0" % (self.wsName,meth,self.biglabel,self.mass,combineOptions);
+        if "blind" in combineOptions: self.biglabel = self.biglabel + "_blind"
         cmmd = "combine %s %s -n %s -m %03i %s" % (self.wsName,meth,self.biglabel,self.mass,combineOptions);
         print cmmd
-        
+
+        # redefine this...        
+        self.oName = "%s/outputs/higgsCombine%s.Asymptotic.mH%03i.root" % (self.outpath,self.biglabel,self.mass);
+
         if not os.path.isfile(self.wsName):
             print "[runAsymLimit], ", self.wsName, "does not exist!"
             return;
@@ -250,7 +255,8 @@ class singleWorkingPoint:
         if not self.highmemory: condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
         if self.highmemory:
             condorScript.write("\n"+"+BigMemoryJob = True")
-            condorScript.write("\n"+'Requirements = Memory >= 199 && OpSys == "LINUX" && (Arch != "DUMMY" ) && Disk > 1000000 && (BigMemoryNode =?= True)')
+            condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&&Disk > 1000000')
+            condorScript.write("\n"+'RequestMemory = 4000')
 
         condorScript.write("\n"+'Should_Transfer_Files = YES')
         #condorScript.write("\n"+'Transfer_Input_Files = '+self.wsName)
@@ -297,9 +303,11 @@ class singleWorkingPoint:
         condorScript.write("\n"+"Executable = "+fn+".sh")
         
         if not self.highmemory: condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&& Disk > 1000000')
+
         if self.highmemory:
             condorScript.write("\n"+"+BigMemoryJob = True")
-            condorScript.write("\n"+'Requirements = Memory >= 199 && OpSys == "LINUX" && (Arch != "DUMMY" ) && Disk > 1000000 && (BigMemoryNode =?= True)')
+            condorScript.write("\n"+'Requirements = Memory >= 199 &&OpSys == "LINUX"&& (Arch != "DUMMY" )&&Disk > 1000000')
+            condorScript.write("\n"+'RequestMemory = 4000')
         
         condorScript.write("\n"+'Should_Transfer_Files = YES')
         #condorScript.write("\n"+'Transfer_Input_Files = '+self.wsBaseName)    
@@ -350,8 +358,23 @@ class singleWorkingPoint:
             
         # 4l  
         if "hzz4l" in self.channels or "hzzllll" in self.channels:               
-            self.dcnames.append( "comb_%s.txt"                   % ("hzz4l") );
-                                                            
+            # self.dcnames.append( "comb_%s.txt"                   % ("hzz4l") );
+            self.dcnames.append( 'hzz4l_4eS_8TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4muS_8TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_2e2muS_8TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4eS_8TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_4muS_8TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_2e2muS_8TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_4eS_7TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4muS_7TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_2e2muS_7TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4eS_7TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_4muS_7TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_2e2muS_7TeV_1.txt' );
+            # order 1 = 2e2mu, 4e, 4mu (70,71,80,81)
+            # order 2 = 4e, 4mu, 2e2mu (70,71,80,81)
+            # order 3 = 80, 81, 70, 71 (4e, 4mu, 2e2mu)
+
         # hzz2l2q
         if "hzz2l2q" in self.channels:               
             # if self.mass >= 230:
@@ -594,7 +617,8 @@ class singleWorkingPoint:
                     if "UEPS" in curline and     (6 in opt): curline = "#" + curline;
                     if "offshell" in curline and (7 in opt): curline = "#" + curline;
                     if "BRhiggs" in curline and  (8 in opt): curline = "#" + curline;
-                    if "lumi" in curline and     (9 in opt): curline = "#" + curline;                
+                    if "lumi_7" in curline and     (9 in opt): curline = "#" + curline;                
+                    if "lumi_8" in curline and     (10 in opt): curline = "#" + curline;                
 
             fout.write( curline+'\n' );
 

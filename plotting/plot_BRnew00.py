@@ -36,12 +36,13 @@ parser.add_option('--tag',action="store",type="string",dest="tag",default="combi
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_081214/outputs";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_092414/outputs";
     #labels = ["combined"];
     labels = [options.tag];
     mass  = [200,250,300,350,400,500,600,700,800,900,1000];
     #cpsq  = [01,02,03,05,07,10];
-    cpsq  = [01,02,03,05,07,10];
+    #cpsq  = [01,02,03,05,07,10];
+    cpsq  = [01,02,03,05,07];
 
     arrays_masses = [];
     arrays_envelo = [];    
@@ -80,6 +81,8 @@ if __name__ == '__main__':
     graphs_1sigma = [];
     graphs_2sigma = [];                
     for a in range(len(cpsq)):
+        #print "sizes = ",len(arrays_masses[a]),", ",len(arrays[a])
+        print "cpsq = ", cpsq[a], ", ",arrays[a] 
         graphs.append( ROOT.TGraph( len(arrays_masses[a]), arrays_masses[a], arrays[a] ) );
         graphs_1sigma.append( ROOT.TGraph( len(2*arrays_masses[a]), arrays_envelo[a], arrays_1sigma[a] ) );
         graphs_2sigma.append( ROOT.TGraph( len(2*arrays_masses[a]), arrays_envelo[a], arrays_2sigma[a] ) );
@@ -129,8 +132,8 @@ if __name__ == '__main__':
     banner.Draw();
     banner2.Draw();    
     ROOT.gPad.SetLogy();
-    can.SaveAs("plots/test_BRnew00-"+options.tag+"_081214.eps");       
-    can.SaveAs("plots/test_BRnew00-"+options.tag+"_081214.pdf");       
+    can.SaveAs("plots/test_BRnew00-"+options.tag+"_092414.eps");       
+    can.SaveAs("plots/test_BRnew00-"+options.tag+"_024914.pdf");       
 
 
 
