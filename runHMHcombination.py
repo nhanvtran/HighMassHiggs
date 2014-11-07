@@ -88,8 +88,8 @@ if __name__ == '__main__':
     #svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/highmass2014"
     svnpath = "/uscms_data/d2/ntran/physics/HighMassHiggs/svn/cardlinks"
     
-    workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_092414/tmpwork"
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_092414"
+    workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_101314/tmpwork"
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_101314"
     #workdir = "/uscms_data/d2/ntran/physics/HighMassHiggs/combine_052314/CMSSW_6_1_1/src/HighMassHiggs/tmpwork_071614/tmpwork"
     #outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_071614"
 
@@ -126,17 +126,18 @@ if __name__ == '__main__':
                 #channelsToRun.append( ["hwwlvqq"] );
                 #channelsToRun.append( ["hzz2l2v"] );
                 #channelsToRun.append( ["hzz4l"] ); 
-                channelsToRun.append( ["hww2l2v"] ); 
+                #channelsToRun.append( ["hww2l2v"] ); 
                 #channelsToRun.append( ["hzz2l2t"] ); 
                 #channelsToRun.append( ["hzz2l2q"] ); 
                 ###channelsToRun.append( ["hww2l2v","hzz2l2v","hzz2l2q","hwwlvqq","hzz4l"] );                     
-                #channelsToRun.append( ["hww2l2v","hwwlvqq","hzz4l"] );  
+                channelsToRun.append( ["hww2l2v","hwwlvqq","hzz4l"] );  
                 #channelsToRun.append( ["hww2l2v","hzz4l"] );  
 
     
-                #labels = ["comb_ww2l2v_wwlvqq_zz4lold"]
-                #labels = ["comb_zz4l_order1"]
-                labels = ["comb_wwlvlv_order1"]
+                labels = ["comb_wwlvlv_wwlvqq_zz4l_dev_3d"]
+                #labels = ["hzz4l_4muS_4eS_8TeV"]
+                ##labels = ["comb_zz4l_reduced3b"]
+                ###labels = ["comb_wwlvqq_order3"]
                 #labels = ["hzz4l","hww2l2v","hwwlvqq"]
                 #labels = ["hww2l2v","hwwlvqq","hzz4l","comb_ww2l2v_wwlvqq_zz4l"]
                 #labels = ["hww2l2v"]

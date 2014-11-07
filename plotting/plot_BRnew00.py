@@ -36,7 +36,7 @@ parser.add_option('--tag',action="store",type="string",dest="tag",default="combi
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_092414/outputs";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_101314/outputs";
     #labels = ["combined"];
     labels = [options.tag];
     mass  = [200,250,300,350,400,500,600,700,800,900,1000];
@@ -82,7 +82,8 @@ if __name__ == '__main__':
     graphs_2sigma = [];                
     for a in range(len(cpsq)):
         #print "sizes = ",len(arrays_masses[a]),", ",len(arrays[a])
-        print "cpsq = ", cpsq[a], ", ",arrays[a] 
+        for b in range(len(arrays_masses[a])):
+            print "brnew = 0, mass = ", arrays_masses[a][b], ", cpsq = ", cpsq[a], ", limit = ",arrays[a][b] 
         graphs.append( ROOT.TGraph( len(arrays_masses[a]), arrays_masses[a], arrays[a] ) );
         graphs_1sigma.append( ROOT.TGraph( len(2*arrays_masses[a]), arrays_envelo[a], arrays_1sigma[a] ) );
         graphs_2sigma.append( ROOT.TGraph( len(2*arrays_masses[a]), arrays_envelo[a], arrays_2sigma[a] ) );
