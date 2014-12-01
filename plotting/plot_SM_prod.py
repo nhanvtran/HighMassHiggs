@@ -24,15 +24,15 @@ ROOT.gStyle.SetPalette(1);
 
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_062414/outputs/";
-    labels = ["combined","combined","combined","combined","combined","combined"];
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_102614/outputs/";
+    labels = ["combined_all","combined_all","combined_SM_prodv2","combined_SM_prodv2","combined_SM_prodv2","combined_SM_prodv2"];
     #labels = ["hzz2l2v"]*3;
     labelNames = ["full combination","full (expected)",
                   "gg #rightarrow H only","gg #rightarrow H only (exp)",
                   "qq #rightarrow Hqq only","qq #rightarrow Hqq only (exp)"];
     postfix = ["","","_ggf","_ggf","_vbf","_vbf"];
     expecteds = [2,4,6];    
-    mass  = [200,250,300,350,400,500,600,700,800,900,1000];
+    mass  = [145,150,160,170,180,190,200,250,300,350,400,500,600,700,800,900,1000];
     #mass  = [400];
 
     arrays_masses = [];
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     colors = [1,1,4,4,6,6,2];
     widths = [2,2,2,2,2,2,3]; 
     styles = [1,2,1,2,1,2,3]; 
-    leg = ROOT.TLegend(0.50,0.18,0.85,0.35);
+    leg = ROOT.TLegend(0.20,0.68,0.6,0.85);
     leg.SetFillStyle(1001);
     leg.SetFillColor(0);    
     leg.SetBorderSize(1);  
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     oneLine.SetLineStyle(2);
              
     can = ROOT.TCanvas("can","can",1200,800);
-    hrl = can.DrawFrame(199,0.01,1001,15.);
+    hrl = can.DrawFrame(144,0.01,1001,15.);
     hrl.GetYaxis().SetTitle("#mu = #sigma_{95%CL}/#sigma_{SM}");
     hrl.GetXaxis().SetTitle("mass (GeV)");
     can.SetGrid(); 

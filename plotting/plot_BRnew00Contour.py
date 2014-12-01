@@ -36,8 +36,8 @@ def GetContours( th2 ):
 ## ===========================================================================================
 if __name__ == '__main__':
 
-    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_062414/outputs";
-    labels = "combined";
+    outpath = "/eos/uscms/store/user/ntran/HighMassHiggsOutput/workingarea_102614/outputs";
+    labels = "combined_BSM";
     #labels = "hzz2l2v";
     mass  = [200,250,300,350,400,500,600,700,800,900,1000];
     cpsq  = [01,02,03,05,07,10];

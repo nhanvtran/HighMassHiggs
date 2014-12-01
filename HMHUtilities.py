@@ -49,7 +49,8 @@ class singleWorkingPoint:
 	##########################################################################################################
 
     def createWorkspace(self, isBatch, overwriteFile=False):
-           
+        
+        print "self.dcnames = ", self.dcnames
         if len(self.dcnames) == 0: return;
         
         # go to that dir
@@ -73,9 +74,9 @@ class singleWorkingPoint:
             # if "hwwof_" in self.dcnames[i] or "hwwsf_" in self.dcnames[i]:
             #     print "hard fix 1 applied: ", self.dcnames[i]                
             #     self.hardFix1(self.dcnames[i]);
-            # if "hwwlvjj" in self.dcnames[i]:
-            #     print "hard fix 1 applied: ", self.dcnames[i]                
-            #     #self.hardFix1(self.dcnames[i]);
+            if "hwwlvjj" in self.dcnames[i]:
+                print "hard fix 1 applied: ", self.dcnames[i]                
+                self.hardFix1(self.dcnames[i]);
                 
             combineCmmd += " %s" % self.dcnames[i];
 
@@ -158,14 +159,17 @@ class singleWorkingPoint:
             meth = " -M "+method;
             #combineOptions = "--run blind";
             #combineOptions = "--run expected -v 99";
-            combineOptions = "-t 0"
-	    #combineOptions = " -v 99 ";
+            combineOptions = "-t 0";
+            #combineOptions = " -v 99 ";
             #if channel == "ALL": continue; 
             if "hzz4l" in self.channels or "hzzllll" in self.channels: 
                 if method == "Asymptotic": combineOptions += " --minosAlgo=stepping --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
                 #if method == "Asymptotic": combineOptions += " --minosAlgo=stepping --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
                 if method == "MaxLikelihoodFit": combineOptions += " --X-rtd TMCSO_AdaptivePseudoAsimov --minimizerStrategy=0 --minimizerTolerance=0.0001 --cminFallback Minuit2:0.01 --cminFallback Minuit:0.001";
                 cpsq_f = float(self.cpsq)/10.;
+                if self.cpsq == 00: cpsq_f = 0.01;
+                if self.cpsq == 50: cpsq_f = 0.05;
+                if self.cpsq == 30: cpsq_f = 0.03;
                 brnew_f = float(self.brnew)/10.;
                 combineOptions += " --setPhysicsModelParameters CMS_zz4l_csquared_BSM=%1.2f,CMS_zz4l_brnew_BSM=%1.2f " % (cpsq_f,brnew_f);        
                 #combineOptions += "--freezeNuisances CMS_zz4l_csquared_BSM,CMS_zz4l_brnew_BSM"
@@ -351,7 +355,7 @@ class singleWorkingPoint:
             
         # hzz2l2t
         if "hzz2l2t" in self.channels:       
-            if self.mass >= 200:         
+            if self.mass >= 200 and self.cpsq > 0 and self.cpsq < 20:         
                 #self.dcnames.append( "DataCard_2l2tau_PFIso_7TeV_LegacyPaper.txt" );
                 #self.dcnames.append( "DataCard_2l2tau_PFIso_8TeV_LegacyPaper.txt" );
                 #self.dcnames.append( "DataCard_H%03i_2l2tau_PFIso_7TeV_8TeV_LegacyPaper.txt"    % (self.mass) );
@@ -364,41 +368,12 @@ class singleWorkingPoint:
             #     self.dcnames.append( "%s_VBF_8TeV.txt"               % ("hzz2l2q") );            
             #     if self.mass >= 400: self.dcnames.append( "%s_llallbMerged_8TeV.txt"      % ("hzz2l2q") );
             #     if self.mass <= 800: self.dcnames.append( "%s_llallb_8TeV.txt"            % ("hzz2l2q") );
-            if self.mass >= 230:
+            if self.mass >= 230 and self.cpsq > 0 and self.cpsq < 20:
                 self.dcnames.append( "hzz2l2q_Combined_8TeV.txt" );
-
-       # 4l  
-        if "hzz4l" in self.channels or "hzzllll" in self.channels:               
-            # self.dcnames.append( "comb_%s.txt"                   % ("hzz4l") );
-            # self.dcnames.append( 'hzz4l_2e2muS_7TeV_0.txt' );                
-            # self.dcnames.append( 'hzz4l_2e2muS_7TeV_1.txt' );
-            # self.dcnames.append( 'hzz4l_2e2muS_8TeV_0.txt' );            
-            # self.dcnames.append( 'hzz4l_2e2muS_8TeV_1.txt' );            
-
-            #self.dcnames.append( 'hzz4l_4eS_8TeV.txt' );
-            #self.dcnames.append( 'hzz4l_4muS_8TeV.txt' );
-            #self.dcnames.append( 'hzz4l_2e2muS_8TeV.txt' );
-
-            self.dcnames.append( 'hzz4l_2e2muS_8TeV_0.txt' );
-            self.dcnames.append( 'hzz4l_4muS_8TeV_0.txt' );
-            self.dcnames.append( 'hzz4l_4eS_8TeV_0.txt' );
-            self.dcnames.append( 'hzz4l_4eS_8TeV_1.txt' );
-            self.dcnames.append( 'hzz4l_4muS_8TeV_1.txt' );
-            self.dcnames.append( 'hzz4l_2e2muS_8TeV_1.txt' );
-            self.dcnames.append( 'hzz4l_4eS_7TeV_0.txt' );
-            self.dcnames.append( 'hzz4l_4muS_7TeV_0.txt' );
-            self.dcnames.append( 'hzz4l_2e2muS_7TeV_0.txt' );
-            self.dcnames.append( 'hzz4l_4eS_7TeV_1.txt' );
-            self.dcnames.append( 'hzz4l_4muS_7TeV_1.txt' );
-            self.dcnames.append( 'hzz4l_2e2muS_7TeV_1.txt' );
-            
-            # order 1 = 2e2mu, 4e, 4mu (70,71,80,81)
-            # order 2 = 4e, 4mu, 2e2mu (70,71,80,81)
-            # order 3 = 80, 81, 70, 71 (4e, 4mu, 2e2mu)      
                             
         # hwwlvqq
         if "hwwlvqq" in self.channels:               
-            if self.mass >= 600: 
+            if self.mass >= 600 and self.cpsq > 0 and self.cpsq < 20: 
                 self.dcnames.append( "%s_ggH%03i_mu_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
                 self.dcnames.append( "%s_ggH%03i_em_2jet_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );     
                 self.dcnames.append( "%s_ggH%03i_el_%02i_%02i_unbin.txt" % ("hwwlvj",self.mass,self.cpsq,self.brnew) );
@@ -406,26 +381,31 @@ class singleWorkingPoint:
                 #2 2j,e,m
                 #3 m,2j,e
 
-            if self.mass >= 170 and self.mass < 600:
+            if self.mass >= 200 and self.mass < 600 and self.cpsq > 0 and self.cpsq < 20:
                 self.dcnames.append( "hwwlvjj_shape_8TeV_cpsq%02i_brnew%02i.txt" % (self.cpsq,self.brnew) );
 
         # hww2l2v
         if "hww2l2v" in self.channels:               
-            hwwpostfix = "EWKS";
-            #self.dcnames.append("hwwof_0j_shape_8TeV_"+hwwpostfix+".txt");
-            self.dcnames.append("hwwof_1j_shape_8TeV_"+hwwpostfix+".txt");
-            self.dcnames.append("hwwof_2j_shape_8TeV_"+hwwpostfix+".txt");            
-            self.dcnames.append("hwwsf_0j_cut_8TeV_"+hwwpostfix+".txt");
-            self.dcnames.append("hwwsf_1j_cut_8TeV_"+hwwpostfix+".txt");
-            self.dcnames.append("hwwsf_2j_cut_8TeV_"+hwwpostfix+".txt");
-            if self.mass <= 600:
-                self.dcnames.append("hwwof_0j_shape_7TeV_"+hwwpostfix+".txt");
-                self.dcnames.append("hwwof_1j_shape_7TeV_"+hwwpostfix+".txt");
-                self.dcnames.append("hwwof_2j_shape_7TeV_"+hwwpostfix+".txt");
-                self.dcnames.append("hwwsf_0j_cut_7TeV_"+hwwpostfix+".txt");
-                self.dcnames.append("hwwsf_1j_cut_7TeV_"+hwwpostfix+".txt");
-                self.dcnames.append("hwwsf_2j_cut_7TeV_"+hwwpostfix+".txt");
+            if self.cpsq > 0  and self.cpsq < 20:
+                hwwpostfix = "EWKS";
+                if self.cpsq == 10: hwwpostfix = "H125Bkg";
+                # hwwpostfix = "EWKS";
 
+                if (hwwpostfix == "EWKS" and self.mass >= 200) or (hwwpostfix == "H125Bkg"):
+                    self.dcnames.append("hwwof_0j_shape_8TeV_"+hwwpostfix+".txt");
+                    self.dcnames.append("hwwof_1j_shape_8TeV_"+hwwpostfix+".txt");
+                    self.dcnames.append("hwwof_2j_shape_8TeV_"+hwwpostfix+".txt");            
+                    self.dcnames.append("hwwsf_0j_cut_8TeV_"+hwwpostfix+".txt");
+                    self.dcnames.append("hwwsf_1j_cut_8TeV_"+hwwpostfix+".txt");
+                    self.dcnames.append("hwwsf_2j_cut_8TeV_"+hwwpostfix+".txt");
+                    if self.mass <= 600:
+                        self.dcnames.append("hwwof_0j_shape_7TeV_"+hwwpostfix+".txt");
+                        self.dcnames.append("hwwof_1j_shape_7TeV_"+hwwpostfix+".txt");
+                        self.dcnames.append("hwwof_2j_shape_7TeV_"+hwwpostfix+".txt");
+                        self.dcnames.append("hwwsf_0j_cut_7TeV_"+hwwpostfix+".txt");
+                        self.dcnames.append("hwwsf_1j_cut_7TeV_"+hwwpostfix+".txt");
+                        self.dcnames.append("hwwsf_2j_cut_7TeV_"+hwwpostfix+".txt");
+            
        # 4l  
         # if "hzz4l" in self.channels or "hzzllll" in self.channels:               
         #     # self.dcnames.append( "comb_%s.txt"                   % ("hzz4l") );
@@ -450,6 +430,39 @@ class singleWorkingPoint:
         #     # order 1 = 2e2mu, 4e, 4mu (70,71,80,81)
         #     # order 2 = 4e, 4mu, 2e2mu (70,71,80,81)
         #     # order 3 = 80, 81, 70, 71 (4e, 4mu, 2e2mu)      
+
+        # 4l    
+        if "hzz4l" in self.channels or "hzzllll" in self.channels:               
+            # self.dcnames.append( "comb_%s.txt"                   % ("hzz4l") );
+            # self.dcnames.append( 'hzz4l_2e2muS_7TeV_0.txt' );                
+            # self.dcnames.append( 'hzz4l_2e2muS_7TeV_1.txt' );
+            # self.dcnames.append( 'hzz4l_2e2muS_8TeV_0.txt' );            
+            # self.dcnames.append( 'hzz4l_2e2muS_8TeV_1.txt' );            
+
+            # self.dcnames.append( 'hzz4l_4eS_8TeV.txt' );
+            # self.dcnames.append( 'hzz4l_4muS_8TeV.txt' );
+            # self.dcnames.append( 'hzz4l_2e2muS_8TeV.txt' );
+            # self.dcnames.append( 'hzz4l_4eS_7TeV.txt' );
+            # self.dcnames.append( 'hzz4l_4muS_7TeV.txt' );
+            # self.dcnames.append( 'hzz4l_2e2muS_7TeV.txt' );
+
+            self.dcnames.append( 'hzz4l_2e2muS_8TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4muS_8TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4eS_8TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4eS_8TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_4muS_8TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_2e2muS_8TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_4eS_7TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4muS_7TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_2e2muS_7TeV_0.txt' );
+            self.dcnames.append( 'hzz4l_4eS_7TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_4muS_7TeV_1.txt' );
+            self.dcnames.append( 'hzz4l_2e2muS_7TeV_1.txt' );
+            
+            # order 1 = 2e2mu, 4e, 4mu (70,71,80,81)
+            # order 2 = 4e, 4mu, 2e2mu (70,71,80,81)
+            # order 3 = 80, 81, 70, 71 (4e, 4mu, 2e2mu)      
+
 
         # print self.dcnames;
         # check that the cards exist!!
